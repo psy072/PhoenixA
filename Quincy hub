@@ -2,11 +2,11 @@
 local screenGui = Instance.new("ScreenGui")
 screenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
 
--- Criando um Frame com fundo azul escuro
+-- Criando o Frame principal (UI Quincy)
 local frame = Instance.new("Frame")
 frame.Size = UDim2.new(0, 250, 0, 150)
 frame.Position = UDim2.new(0.5, -125, 0.5, -75)
-frame.BackgroundColor3 = Color3.fromRGB(10, 20, 40) -- azul bem escuro
+frame.BackgroundColor3 = Color3.fromRGB(10, 20, 40) -- azul escuro
 frame.Parent = screenGui
 
 -- UICorner e UIStroke no Frame
@@ -30,48 +30,28 @@ title.TextScaled = true
 title.Font = Enum.Font.SourceSansBold
 title.Parent = frame
 
--- Botão principal Quincy (logo)
-local toggleButton = Instance.new("ImageButton")
-toggleButton.Size = UDim2.new(0, 100, 0, 100)
-toggleButton.Position = UDim2.new(0.5, -50, 0.5, -30)
-toggleButton.Image = "rbxassetid://129084737096368"
-toggleButton.Parent = frame
+-- Botão de toggle isolado (logo Quincy)
+local logoToggle = Instance.new("ImageButton")
+logoToggle.Size = UDim2.new(0, 60, 0, 60)
+logoToggle.Position = UDim2.new(0, 10, 0, 10) -- canto superior esquerdo da tela
+logoToggle.Image = "rbxassetid://129084737096368" -- sua logo
+logoToggle.Parent = screenGui
 
-local btnCorner = Instance.new("UICorner")
-btnCorner.CornerRadius = UDim.new(0, 8)
-btnCorner.Parent = toggleButton
+local logoCorner = Instance.new("UICorner")
+logoCorner.CornerRadius = UDim.new(0, 8)
+logoCorner.Parent = logoToggle
 
-local btnStroke = Instance.new("UIStroke")
-btnStroke.Thickness = 2
-btnStroke.Color = Color3.fromRGB(255, 215, 0)
-btnStroke.Parent = toggleButton
+local logoStroke = Instance.new("UIStroke")
+logoStroke.Thickness = 2
+logoStroke.Color = Color3.fromRGB(255, 215, 0)
+logoStroke.Parent = logoToggle
 
--- Estado inicial do botão Quincy
-local isOn = false
-toggleButton.MouseButton1Click:Connect(function()
-    isOn = not isOn
-    if isOn then
-        print("Quincy ligado!")
-        toggleButton.ImageColor3 = Color3.fromRGB(255, 215, 0)
-    else
-        print("Quincy desligado!")
-        toggleButton.ImageColor3 = Color3.fromRGB(150, 150, 150)
-    end
+-- Função para esconder/mostrar o Frame
+local uiVisible = true
+logoToggle.MouseButton1Click:Connect(function()
+    uiVisible = not uiVisible
+    frame.Visible = uiVisible
 end)
-
--- Botão extra para ativar/desativar a UI inteira
-local uiToggle = Instance.new("TextButton")
-uiToggle.Size = UDim2.new(0, 120, 0, 40)
-uiToggle.Position = UDim2.new(0, 10, 1, -50) -- canto inferior esquerdo
-uiToggle.Text = "Mostrar/Esconder UI"
-uiToggle.BackgroundColor3 = Color3.fromRGB(10, 20, 40)
-uiToggle.TextColor3 = Color3.fromRGB(255, 215, 0)
-uiToggle.Parent = screenGui
-
-local uiCorner = Instance.new("UICorner")
-uiCorner.CornerRadius = UDim.new(0, 8)
-uiCorner.Parent = uiToggle
-
 local uiStroke = Instance.new("UIStroke")
 uiStroke.Thickness = 2
 uiStroke.Color = Color3.fromRGB(255, 215, 0)
