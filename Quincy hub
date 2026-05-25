@@ -1,65 +1,43 @@
--- Criando ScreenGui
-local ScreenGui = Instance.new("ScreenGui")
-local Frame = Instance.new("Frame")
-local ESPButton = Instance.new("TextButton")
-local TPButton = Instance.new("TextButton")
-local AutoFarmButton = Instance.new("TextButton")
-local NPCDropdown = Instance.new("TextButton")
-local TextBox = Instance.new("TextBox")
+-- Criando a ScreenGui
+local screenGui = Instance.new("ScreenGui")
+screenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
 
-ScreenGui.Parent = game.CoreGui
+-- Criando um Frame com fundo azul escuro
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 250, 0, 150)
+frame.Position = UDim2.new(0.5, -125, 0.5, -75)
+frame.BackgroundColor3 = Color3.fromRGB(10, 20, 40) -- azul bem escuro
+frame.Parent = screenGui
 
--- Frame principal
-Frame.Parent = ScreenGui
-Frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-Frame.Size = UDim2.new(0, 250, 0, 300)
-Frame.Position = UDim2.new(0.5, -125, 0.5, -150)
+-- Criando um título dourado
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 40)
+title.Position = UDim2.new(0, 0, 0, 0)
+title.BackgroundTransparency = 1
+title.Text = "Quincy"
+title.TextColor3 = Color3.fromRGB(255, 215, 0) -- dourado
+title.TextScaled = true
+title.Font = Enum.Font.SourceSansBold
+title.Parent = frame
 
--- Botão ESP
-ESPButton.Parent = Frame
-ESPButton.Text = "ESP Baús/Frutas"
-ESPButton.Size = UDim2.new(0, 200, 0, 40)
-ESPButton.Position = UDim2.new(0, 25, 0, 20)
-ESPButton.MouseButton1Click:Connect(function()
-    print("ESP ativado")
-    -- Código ESP aqui
-end)
+-- Criando botão de toggle com a logo Quincy
+local toggleButton = Instance.new("ImageButton")
+toggleButton.Size = UDim2.new(0, 100, 0, 100)
+toggleButton.Position = UDim2.new(0.5, -50, 0.5, -30)
+toggleButton.Image = "rbxassetid://129084737096368" -- logo Quincy
+toggleButton.Parent = frame
 
--- Botão TP
-TPButton.Parent = Frame
-TPButton.Text = "Teleportar Ilhas"
-TPButton.Size = UDim2.new(0, 200, 0, 40)
-TPButton.Position = UDim2.new(0, 25, 0, 70)
-TPButton.MouseButton1Click:Connect(function()
-    print("TP realizado")
-    -- Código TP aqui
-end)
+-- Estado inicial
+local isOn = false
 
--- Botão Auto Farm
-AutoFarmButton.Parent = Frame
-AutoFarmButton.Text = "Auto Farm"
-AutoFarmButton.Size = UDim2.new(0, 200, 0, 40)
-AutoFarmButton.Position = UDim2.new(0, 25, 0, 120)
-AutoFarmButton.MouseButton1Click:Connect(function()
-    print("Auto Farm iniciado")
-    -- Código Auto Farm aqui
-end)
-
--- Dropdown NPC/Boss (simples)
-NPCDropdown.Parent = Frame
-NPCDropdown.Text = "Selecionar NPC/Boss"
-NPCDropdown.Size = UDim2.new(0, 200, 0, 40)
-NPCDropdown.Position = UDim2.new(0, 25, 0, 170)
-NPCDropdown.MouseButton1Click:Connect(function()
-    print("NPC/Boss selecionado")
-    -- Aqui você pode abrir outra UI com opções
-end)
-
--- TextBox
-TextBox.Parent = Frame
-TextBox.PlaceholderText = "Digite algo..."
-TextBox.Size = UDim2.new(0, 200, 0, 40)
-TextBox.Position = UDim2.new(0, 25, 0, 220)
-TextBox.FocusLost:Connect(function()
-    print("Texto digitado: "..TextBox.Text)
+-- Função de toggle
+toggleButton.MouseButton1Click:Connect(function()
+    isOn = not isOn
+    if isOn then
+        print("Quincy ligado!")
+        toggleButton.ImageColor3 = Color3.fromRGB(255, 215, 0) -- dourado ativo
+    else
+        print("Quincy desligado!")
+        toggleButton.ImageColor3 = Color3.fromRGB(150, 150, 150) -- cinza inativo
+    end
 end)
