@@ -1,5 +1,5 @@
--- Phoenix A Hub (versão corrigida e unificada)
--- Pronto para rodar como LocalScript (StarterPlayerScripts) ou via loadstring no cliente
+-- Phoenix A Hub (versão final unificada — Moviment moved to Extras)
+-- LocalScript pronto para rodar em StarterPlayerScripts ou via loadstring
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -7,7 +7,7 @@ local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 local player = Players.LocalPlayer
 
--- Character refs (atualiza no respawn)
+-- Character refs
 local function getCharacter()
     local char = player.Character or player.CharacterAdded:Wait()
     local humanoid = char:FindFirstChildOfClass("Humanoid")
@@ -39,7 +39,7 @@ local state = {
     fovConn = nil
 }
 
--- UI helpers
+-- Helpers UI
 local function makeUICorner(instance, radius)
     local c = Instance.new("UICorner")
     c.CornerRadius = UDim.new(0, radius or 8)
@@ -60,10 +60,11 @@ local function createButton(parent, text, order, callback)
     btn.Size = UDim2.new(0.92, 0, 0, 44)
     btn.LayoutOrder = order or 1
     btn.Text = text
-    btn.TextScaled = true
+    btn.TextScaled = false
+    btn.FontSize = Enum.FontSize.Size14
     btn.Font = Enum.Font.SourceSansSemibold
     btn.BackgroundColor3 = Color3.fromRGB(36, 66, 120)
-    btn.TextColor3 = Color3.fromRGB(255,255,255)
+    btn.TextColor3 = Color3.fromRGB(180,0,180)
     btn.Parent = parent
     makeUICorner(btn, 8)
     makeStroke(btn)
@@ -90,7 +91,8 @@ local function createSlider(parent, labelText, defaultValue, minVal, maxVal, ord
     label.BackgroundTransparency = 1
     label.Text = labelText
     label.TextColor3 = Color3.fromRGB(180,0,180)
-    label.TextScaled = true
+    label.FontSize = Enum.FontSize.Size14
+    label.TextScaled = false
     label.Font = Enum.Font.SourceSansSemibold
     label.TextXAlignment = Enum.TextXAlignment.Left
 
@@ -98,8 +100,9 @@ local function createSlider(parent, labelText, defaultValue, minVal, maxVal, ord
     valueBox.Size = UDim2.new(0.22,0,0,28)
     valueBox.Position = UDim2.new(0.73,0,0,0)
     valueBox.BackgroundColor3 = Color3.fromRGB(24,44,84)
-    valueBox.TextColor3 = Color3.fromRGB(240,240,240)
-    valueBox.TextScaled = true
+    valueBox.TextColor3 = Color3.fromRGB(180,0,180)
+    valueBox.FontSize = Enum.FontSize.Size14
+    valueBox.TextScaled = false
     valueBox.Text = tostring(defaultValue)
     valueBox.PlaceholderText = tostring(defaultValue)
     valueBox.ClearTextOnFocus = false
@@ -186,13 +189,12 @@ local function createSlider(parent, labelText, defaultValue, minVal, maxVal, ord
     return container, valueBox
 end
 
--- Cria GUI direto no PlayerGui
+-- GUI principal
 local screenGui = Instance.new("ScreenGui")
 screenGui.ResetOnSpawn = false
 screenGui.Name = "PhoenixA_Hub"
 screenGui.Parent = player:WaitForChild("PlayerGui")
 
--- Frame principal
 local frame = Instance.new("Frame", screenGui)
 frame.Size = UDim2.new(0, 680, 0, 460)
 frame.Position = UDim2.new(0.5, -340, 0.5, -230)
@@ -200,7 +202,6 @@ frame.BackgroundColor3 = Color3.fromRGB(12, 18, 34)
 makeUICorner(frame, 14)
 makeStroke(frame, Color3.fromRGB(140,40,180), 2)
 
--- Título centralizado
 local title = Instance.new("TextLabel", frame)
 title.Size = UDim2.new(1, 0, 0, 48)
 title.Position = UDim2.new(0, 0, 0, 8)
@@ -267,7 +268,8 @@ local function createTab(name)
     btn.Size = UDim2.new(1, 0, 0, 44)
     btn.LayoutOrder = 1
     btn.Text = name
-    btn.TextScaled = true
+    btn.TextScaled = false
+    btn.FontSize = Enum.FontSize.Size14
     btn.Font = Enum.Font.SourceSansSemibold
     btn.BackgroundColor3 = Color3.fromRGB(28, 48, 88)
     btn.TextColor3 = Color3.fromRGB(180, 0, 180)
@@ -311,14 +313,14 @@ end
 local movimentoFrame, movimentoLayout = makeContentScrolling(contentFrame)
 local extrasFrame, extrasLayout = makeContentScrolling(contentFrame)
 local visualFrame, visualLayout = makeContentScrolling(contentFrame)
-movimentoFrame.Visible = true
-extrasFrame.Visible = false
+movimentoFrame.Visible = false -- agora vazio, controles movidos para Extras
+extrasFrame.Visible = true
 visualFrame.Visible = false
 
 -- Alternância de abas com highlight visual
 movimentoTab.MouseButton1Click:Connect(function()
-    movimentoFrame.Visible = true
-    extrasFrame.Visible = false
+    movimentoFrame.Visible = false
+    extrasFrame.Visible = true
     visualFrame.Visible = false
     movimentoTab.BackgroundColor3 = Color3.fromRGB(44,74,140)
     extrasTab.BackgroundColor3 = Color3.fromRGB(28,48,88)
@@ -349,13 +351,11 @@ movimentoLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function
         movimentoFrame.CanvasSize = UDim2.new(0, 0, 0, movimentoLayout.AbsoluteContentSize.Y + 12)
     end
 end)
-
 extrasLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     if extrasFrame and extrasLayout then
         extrasFrame.CanvasSize = UDim2.new(0, 0, 0, extrasLayout.AbsoluteContentSize.Y + 12)
     end
 end)
-
 visualLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     if visualFrame and visualLayout then
         visualFrame.CanvasSize = UDim2.new(0, 0, 0, visualLayout.AbsoluteContentSize.Y + 12)
@@ -365,7 +365,7 @@ end)
 -- Noclip (salva e restaura colisões)
 local function startNoclip()
     if state.noclip then return end
-    local char = getCharacter()
+    local char = player.Character
     if not char then return end
     state.noclip = true
     state.savedCollisions = {}
@@ -422,20 +422,56 @@ local function resetMovement()
     stopNoclip()
 end
 
--- Monta UI: sliders e botões no movimentoFrame (todos parentados corretamente)
+-- Monta UI: Extras (controles de Movimento movidos para aqui; fonte menor e púrpura)
 do
     local order = 1
-    createButton(movimentoFrame, "Reset Movement", order, function() resetMovement() end)
+
+    -- Noclip ON/OFF (botão principal)
+    local btnNoclip = createButton(extrasFrame, "Noclip ON/OFF", order, function()
+        if state.noclip then
+            stopNoclip()
+            btnNoclip.Text = "Noclip OFF"
+        else
+            startNoclip()
+            btnNoclip.Text = "Noclip ON"
+        end
+    end)
+    btnNoclip.TextScaled = false
+    btnNoclip.FontSize = Enum.FontSize.Size14
+    btnNoclip.TextColor3 = Color3.fromRGB(180,0,180)
+    btnNoclip.LayoutOrder = order
+    btnNoclip.Text = state.noclip and "Noclip ON" or "Noclip OFF"
     order = order + 1
 
-    createSlider(movimentoFrame, "Walk Speed", state.walkSpeed, 8, 300, order, function(val)
+    -- Separator (opcional visual)
+    local sep = Instance.new("Frame", extrasFrame)
+    sep.Size = UDim2.new(0.95, 0, 0, 6)
+    sep.LayoutOrder = order
+    sep.BackgroundTransparency = 1
+    order = order + 1
+
+    -- Reset Movement
+    local btnReset = createButton(extrasFrame, "Reset Movement", order, function() resetMovement() end)
+    btnReset.TextScaled = false
+    btnReset.FontSize = Enum.FontSize.Size14
+    btnReset.TextColor3 = Color3.fromRGB(180,0,180)
+    btnReset.LayoutOrder = order
+    order = order + 1
+
+    -- Walk Speed slider
+    local wsContainer, wsBox = createSlider(extrasFrame, "Walk Speed", state.walkSpeed, 8, 300, order, function(val)
         state.walkSpeed = val
         local _, humanoidLocal = getCharacter()
         if humanoidLocal then humanoidLocal.WalkSpeed = val end
     end)
+    wsContainer.LayoutOrder = order
+    wsBox.TextColor3 = Color3.fromRGB(180,0,180)
+    wsBox.FontSize = Enum.FontSize.Size14
+    wsBox.TextScaled = false
     order = order + 1
 
-    createSlider(movimentoFrame, "Jump Power", state.jumpPower, 10, 300, order, function(val)
+    -- Jump Power slider
+    local jpContainer, jpBox = createSlider(extrasFrame, "Jump Power", state.jumpPower, 10, 300, order, function(val)
         state.jumpPower = val
         local _, humanoidLocal = getCharacter()
         if humanoidLocal then
@@ -443,10 +479,14 @@ do
             pcall(function() humanoidLocal.UseJumpPower = true end)
         end
     end)
+    jpContainer.LayoutOrder = order
+    jpBox.TextColor3 = Color3.fromRGB(180,0,180)
+    jpBox.FontSize = Enum.FontSize.Size14
+    jpBox.TextScaled = false
     order = order + 1
 
-    -- Teleport input + button
-    local tpContainer = Instance.new("Frame", movimentoFrame)
+    -- Teleport input + botão
+    local tpContainer = Instance.new("Frame", extrasFrame)
     tpContainer.Size = UDim2.new(0.95, 0, 0, 44)
     tpContainer.LayoutOrder = order
     tpContainer.BackgroundTransparency = 1
@@ -455,8 +495,9 @@ do
     tpLabel.Size = UDim2.new(0.36, 0, 1, 0)
     tpLabel.BackgroundTransparency = 1
     tpLabel.Text = "Teleport to"
-    tpLabel.TextColor3 = Color3.fromRGB(230,230,230)
-    tpLabel.TextScaled = true
+    tpLabel.TextColor3 = Color3.fromRGB(180,0,180)
+    tpLabel.FontSize = Enum.FontSize.Size14
+    tpLabel.TextScaled = false
     tpLabel.Font = Enum.Font.SourceSansSemibold
 
     local tpBox = Instance.new("TextBox", tpContainer)
@@ -464,35 +505,36 @@ do
     tpBox.Position = UDim2.new(0.38, 0, 0, 0)
     tpBox.PlaceholderText = "player name"
     tpBox.Text = ""
-    tpBox.TextScaled = true
+    tpBox.TextColor3 = Color3.fromRGB(180,0,180)
+    tpBox.FontSize = Enum.FontSize.Size14
+    tpBox.TextScaled = false
     tpBox.BackgroundColor3 = Color3.fromRGB(24,44,84)
     makeUICorner(tpBox, 6)
     makeStroke(tpBox, Color3.fromRGB(140,40,180), 1)
     order = order + 1
 
-    createButton(movimentoFrame, "Teleport", order, function()
+    local btnTeleport = createButton(extrasFrame, "Teleport", order, function()
         teleportToPlayer(tpBox.Text)
     end)
+    btnTeleport.TextScaled = false
+    btnTeleport.FontSize = Enum.FontSize.Size14
+    btnTeleport.TextColor3 = Color3.fromRGB(180,0,180)
+    btnTeleport.LayoutOrder = order
     order = order + 1
-end
 
--- Monta UI: Extras
-do
-    createButton(extrasFrame, "Toggle Noclip", 1, function()
-        if state.noclip then stopNoclip() else startNoclip() end
-    end)
-
+    -- Placeholder / nota
     local placeholderExtras = Instance.new("TextLabel", extrasFrame)
     placeholderExtras.Size = UDim2.new(0.9, 0, 0, 44)
-    placeholderExtras.LayoutOrder = 2
+    placeholderExtras.LayoutOrder = order
     placeholderExtras.BackgroundTransparency = 1
-    placeholderExtras.Text = "Extras: Noclip disponível"
-    placeholderExtras.TextColor3 = Color3.fromRGB(220,220,220)
-    placeholderExtras.TextScaled = true
+    placeholderExtras.Text = "Extras e controles de Movimento"
+    placeholderExtras.TextColor3 = Color3.fromRGB(180,0,180)
+    placeholderExtras.FontSize = Enum.FontSize.Size14
+    placeholderExtras.TextScaled = false
     placeholderExtras.Font = Enum.Font.SourceSansSemibold
 end
 
--- Visual functions: Highlight helper
+---- Visual functions: Highlight helper
 local function createHighlight(targetModel, color)
     if not targetModel or not targetModel:IsA("Model") then return nil end
     local ok, highlight = pcall(function()
@@ -526,7 +568,7 @@ local function enableESPPlayers()
             if h then state.espPlayerHighlights[pl] = h end
         end
     end)
-    Players.PlayerRemoving:Connect(function(pl)
+    state.espPlayersRemovingConn = Players.PlayerRemoving:Connect(function(pl)
         if state.espPlayerHighlights[pl] then
             pcall(function() state.espPlayerHighlights[pl]:Destroy() end)
             state.espPlayerHighlights[pl] = nil
@@ -537,6 +579,7 @@ end
 local function disableESPPlayers()
     state.espPlayers = false
     if state.espPlayersConn then state.espPlayersConn:Disconnect() state.espPlayersConn = nil end
+    if state.espPlayersRemovingConn then state.espPlayersRemovingConn:Disconnect() state.espPlayersRemovingConn = nil end
     for pl, h in pairs(state.espPlayerHighlights) do
         if h and h.Parent then pcall(function() h:Destroy() end) end
         state.espPlayerHighlights[pl] = nil
@@ -595,7 +638,7 @@ local function disableESPNPCs()
     end
 end
 
--- FOV Circle (Drawing API if disponível)
+-- FOV Circle (Drawing API if available)
 local function createFOVDrawing()
     local ok, Drawing = pcall(function() return Drawing end)
     if not ok or not Drawing then return nil end
@@ -611,7 +654,9 @@ end
 
 local function enableFOV()
     local ok, Drawing = pcall(function() return Drawing end)
-    if not ok or not Drawing then return end
+    if not ok or not Drawing then
+        return
+    end
     if state.fovEnabled then return end
     state.fovEnabled = true
     if not state.fovDrawing then
@@ -638,30 +683,43 @@ local function disableFOV()
     end
 end
 
--- Monta UI na aba Visual
+-- Monta UI na aba Visual (fonte menor e púrpura)
 do
     local vOrder = 1
-    createButton(visualFrame, "Toggle ESP Players", vOrder, function()
+    local btnPlayers = createButton(visualFrame, "Toggle ESP Players", vOrder, function()
         if state.espPlayers then disableESPPlayers() else enableESPPlayers() end
     end)
+    btnPlayers.TextScaled = false
+    btnPlayers.FontSize = Enum.FontSize.Size14
+    btnPlayers.TextColor3 = Color3.fromRGB(180,0,180)
     vOrder = vOrder + 1
 
-    createButton(visualFrame, "Toggle ESP NPCs", vOrder, function()
+    local btnNPCs = createButton(visualFrame, "Toggle ESP NPCs", vOrder, function()
         if state.espNPCs then disableESPNPCs() else enableESPNPCs() end
     end)
+    btnNPCs.TextScaled = false
+    btnNPCs.FontSize = Enum.FontSize.Size14
+    btnNPCs.TextColor3 = Color3.fromRGB(180,0,180)
     vOrder = vOrder + 1
 
-    createButton(visualFrame, "Toggle FOV Circle", vOrder, function()
+    local btnFOV = createButton(visualFrame, "Toggle FOV Circle", vOrder, function()
         if state.fovEnabled then disableFOV() else enableFOV() end
     end)
+    btnFOV.TextScaled = false
+    btnFOV.FontSize = Enum.FontSize.Size14
+    btnFOV.TextColor3 = Color3.fromRGB(180,0,180)
     vOrder = vOrder + 1
 
-    createSlider(visualFrame, "FOV Radius", state.fovRadius, 50, 600, vOrder, function(val)
+    local fovContainer, fovBox = createSlider(visualFrame, "FOV Radius", state.fovRadius, 50, 600, vOrder, function(val)
         state.fovRadius = val
         if state.fovDrawing then
             pcall(function() state.fovDrawing.Radius = val end)
         end
     end)
+    fovContainer.LayoutOrder = vOrder
+    fovBox.TextColor3 = Color3.fromRGB(180,0,180)
+    fovBox.FontSize = Enum.FontSize.Size14
+    fovBox.TextScaled = false
     vOrder = vOrder + 1
 
     local placeholderVisual = Instance.new("TextLabel", visualFrame)
@@ -669,13 +727,26 @@ do
     placeholderVisual.LayoutOrder = vOrder
     placeholderVisual.BackgroundTransparency = 1
     placeholderVisual.Text = "Visual features: ESP e FOV"
-    placeholderVisual.TextColor3 = Color3.fromRGB(220,220,220)
-    placeholderVisual.TextScaled = true
+    placeholderVisual.TextColor3 = Color3.fromRGB(180,0,180)
+    placeholderVisual.FontSize = Enum.FontSize.Size14
+    placeholderVisual.TextScaled = false
     placeholderVisual.Font = Enum.Font.SourceSansSemibold
+end
+
+-- Apply initial values
+do
+    local _, humanoidInit = getCharacter()
+    if humanoidInit then
+        humanoidInit.WalkSpeed = state.walkSpeed
+        humanoidInit.JumpPower = state.jumpPower
+        pcall(function() humanoidInit.UseJumpPower = true end)
+    end
 end
 
 -- Ajusta CanvasSize dinamicamente (inicial)
 task.delay(0.1, function()
+    if movimentoLayout then movimentoFrame.CanvasSize = UDim2.new(0,0,0, movimentoLayout.AbsoluteContentSize.Y + 12) end
+    if extrasLayout then extrasFrame.CanvasSize = UDim2.new(0,0,0, extrasLayout.AbsoluteContentSize.Y + 12) end
     if visualLayout then visualFrame.CanvasSize = UDim2.new(0,0,0, visualLayout.AbsoluteContentSize.Y + 12) end
 end)
 
@@ -690,3 +761,5 @@ if script and typeof(script) == "Instance" then
         end
     end)
 end
+
+-- Safety note: teste em Play Solo antes de usar em servidores públicos
