@@ -1,4 +1,4 @@
--- Phoenix A hub (versão final corrigida)
+-- Phoenix A hub (corrigido e testado para execução)
 -- Coloque este LocalScript em StarterPlayerScripts
 
 local Players = game:GetService("Players")
@@ -6,7 +6,7 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 
--- Helpers de personagem
+-- Estado e helpers
 local function getCharacter()
     local char = player.Character or player.CharacterAdded:Wait()
     local humanoid = char:FindFirstChildOfClass("Humanoid")
@@ -16,7 +16,6 @@ end
 
 local character, humanoid, hrp = getCharacter()
 
--- Estado global
 local state = {
     fly = false,
     flySpeed = 60,
@@ -30,7 +29,6 @@ local state = {
     savedCollisions = {}
 }
 
--- Reaplicar valores no respawn
 player.CharacterAdded:Connect(function(char)
     character = char
     humanoid = char:WaitForChild("Humanoid")
@@ -38,7 +36,9 @@ player.CharacterAdded:Connect(function(char)
     if humanoid then
         humanoid.WalkSpeed = state.walkSpeed or 16
         humanoid.JumpPower = state.jumpPower or 50
-        humanoid.UseJumpPower = true
+        if humanoid:IsA("Humanoid") then
+            pcall(function() humanoid.UseJumpPower = true end)
+        end
     end
 end)
 
@@ -86,7 +86,7 @@ toggleBtn.MouseButton1Click:Connect(function()
     frame.Visible = uiVisible
 end)
 
--- Drag
+-- Drag helper
 local function makeDraggable(gui)
     local dragging, dragStart, startPos
     gui.InputBegan:Connect(function(input)
@@ -325,11 +325,8 @@ local function updateCanvasSize(sf)
         sf.CanvasSize = UDim2.new(0,0,0, layout.AbsoluteContentSize.Y + 12)
     end
 end
-movimentoLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() updateCanvasSize(movimentoFrame) end)
-extrasLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() updateCanvasSize(extrasFrame) end)
-visualLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() updateCanvasSize(visualFrame) end)
 
--- Key tracking (PC)
+-- Key tracking
 local keys = {}
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
@@ -343,7 +340,7 @@ UserInputService.InputEnded:Connect(function(input)
     end
 end)
 
--- Fly implementation (PC + mobile)
+-- Fly implementation (PC + mobile fallback)
 local function startFly()
     if state.fly then return end
     character, humanoid, hrp = getCharacter()
@@ -391,8 +388,8 @@ local function startFly()
         local vertical = 0
         if keys[Enum.KeyCode.Space] then vertical = vertical + 1 end
         if keys[Enum.KeyCode.LeftShift] or keys[Enum.KeyCode.RightShift] then vertical = vertical - 1 end
-        if humanoid and humanoid:GetState() == Enum.HumanoidStateType.Jumping then vertical = vertical + 1 end
-        if humanoid and humanoid.Jump then vertical = vertical + 1 end
+        -- Humanoid.Jump is writeable; detect jump via state
+        if humanoid:GetState() == Enum.HumanoidStateType.Jumping then vertical = vertical + 1 end
 
         local dir = Vector3.new(moveVec.X, 0, moveVec.Z)
         if dir.Magnitude > 0 then dir = dir.Unit end
@@ -473,7 +470,7 @@ local function resetMovement()
     if humanoid then
         humanoid.WalkSpeed = 16
         humanoid.JumpPower = 50
-        humanoid.UseJumpPower = true
+        pcall(function() humanoid.UseJumpPower = true end)
     end
     state.flySpeed = 60
     state.walkSpeed = 16
@@ -506,7 +503,7 @@ createSlider(movimentoFrame, "Jump Power", 50, 10, 300, order, function(val)
     character, humanoid = getCharacter()
     if humanoid then
         humanoid.JumpPower = val
-        humanoid.UseJumpPower = true
+        pcall(function() humanoid.UseJumpPower = true end)
     end
 end)
 order = order + 1
@@ -547,4 +544,12 @@ order = order + 1
 
 -- Extras: Noclip toggle
 createButton(extrasFrame, "Toggle Noclip", 1, function()
-    if state.noclip then stopNoclip() 
+    if state.noclip then stopNoclip() else startNoclip() end
+end)
+
+-- Visual placeholder
+local placeholder = Instance.new("TextLabel", visualFrame)
+placeholder.Size = UDim2.new(0.9, 0, 0, 44)
+placeholder.LayoutOrder = 1
+placeholder.BackgroundTransparency = 1
+placeholder.Text = "Visuals (ESP, Radar) - em desenvolvimento"
