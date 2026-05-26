@@ -273,13 +273,14 @@ end
 local movimentoTab = createTab("Movimento")
 local extrasTab = createTab("Extras")
 
--- Área de conteúdo expandida à direita das abas
+-- Área de conteúdo expandida à direita das abas (BLOCO ATUALIZADO)
 local contentFrame = Instance.new("Frame", frame)
-contentFrame.Size = UDim2.new(1, -160, 1, -96) -- ocupa o restante do espaço
+contentFrame.Size = UDim2.new(1, -160, 1, -96)
 contentFrame.Position = UDim2.new(0, 144, 0, 64)
 contentFrame.BackgroundTransparency = 1
 
-local function createContentScroll(parent)
+-- Função auxiliar para criar ScrollingFrame padronizado
+local function makeContentScrolling(parent)
     local sf = Instance.new("ScrollingFrame", parent)
     sf.Size = UDim2.new(1, 0, 1, 0)
     sf.Position = UDim2.new(0, 0, 0, 0)
@@ -295,18 +296,20 @@ local function createContentScroll(parent)
     return sf, layout
 end
 
-local movimentoFrame, movimentoLayout = createContentScroll(contentFrame)
-local extrasFrame, extrasLayout = createContentScroll(contentFrame)
+-- Cria as abas de conteúdo como ScrollingFrames
+local movimentoFrame, movimentoLayout = makeContentScrolling(contentFrame)
+local extrasFrame, extrasLayout = makeContentScrolling(contentFrame)
 movimentoFrame.Visible = true
 extrasFrame.Visible = false
 
+-- Alternância de abas com highlight visual
 movimentoTab.MouseButton1Click:Connect(function()
     movimentoFrame.Visible = true
     extrasFrame.Visible = false
-    -- highlight tab
     movimentoTab.BackgroundColor3 = Color3.fromRGB(44,74,140)
     extrasTab.BackgroundColor3 = Color3.fromRGB(28,48,88)
 end)
+
 extrasTab.MouseButton1Click:Connect(function()
     movimentoFrame.Visible = false
     extrasFrame.Visible = true
@@ -314,15 +317,69 @@ extrasTab.MouseButton1Click:Connect(function()
     movimentoTab.BackgroundColor3 = Color3.fromRGB(28,48,88)
 end)
 
--- Update canvas size helper
-local function updateCanvasSize(sf)
-    local layout = sf:FindFirstChildOfClass("UIListLayout")
-    if layout then
-        sf.CanvasSize = UDim2.new(0,0,0, layout.AbsoluteContentSize.Y + 12)
+-- Atualiza CanvasSize automaticamente (evita problemas de scroll)
+movimentoLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    if movimentoFrame and movimentoLayout then
+        movimentoFrame.CanvasSize = UDim2.new(0, 0, 0, movimentoLayout.AbsoluteContentSize.Y + 12)
     end
-end
-movimentoLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() updateCanvasSize(movimentoFrame) end)
-extrasLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() updateCanvasSize(extrasFrame) end)
+end)
+
+extrasLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    if extrasFrame and extrasLayout then
+        extrasFrame.CanvasSize = UDim2.new(0, 0, 0, extrasLayout.AbsoluteContentSize.Y + 12)
+    end
+end)
+
+-- Exemplo de como adicionar controles à aba Movimento (substitua/adicione os seus)
+local order = 1
+createButton(movimentoFrame, "Reset Movement", order, function() resetMovement() end)
+order = order + 1
+
+createSlider(movimentoFrame, "Walk Speed", state.walkSpeed, 8, 300, order, function(val)
+    state.walkSpeed = val
+    local _, humanoidLocal = getCharacter()
+    if humanoidLocal then humanoidLocal.WalkSpeed = val end
+end)
+order = order + 1
+
+createSlider(movimentoFrame, "Jump Power", state.jumpPower, 10, 300, order, function(val)
+    state.jumpPower = val
+    local _, humanoidLocal = getCharacter()
+    if humanoidLocal then
+        humanoidLocal.JumpPower = val
+        pcall(function() humanoidLocal.UseJumpPower = true end)
+    end
+end)
+order = order + 1
+
+-- Teleport input + botão (exemplo)
+local tpContainer = Instance.new("Frame", movimentoFrame)
+tpContainer.Size = UDim2.new(0.95, 0, 0, 44)
+tpContainer.LayoutOrder = order
+tpContainer.BackgroundTransparency = 1
+local tpLabel = Instance.new("TextLabel", tpContainer)
+tpLabel.Size = UDim2.new(0.36, 0, 1, 0)
+tpLabel.BackgroundTransparency = 1
+tpLabel.Text = "Teleport to"
+tpLabel.TextColor3 = Color3.fromRGB(230,230,230)
+tpLabel.TextScaled = true
+tpLabel.Font = Enum.Font.SourceSansSemibold
+local tpBox = Instance.new("TextBox", tpContainer)
+tpBox.Size = UDim2.new(0.58, 0, 1, 0)
+tpBox.Position = UDim2.new(0.38, 0, 0, 0)
+tpBox.PlaceholderText = "player name"
+tpBox.Text = ""
+tpBox.TextScaled = true
+tpBox.BackgroundColor3 = Color3.fromRGB(24,44,84)
+makeUICorner(tpBox, 6)
+local strokeTP = Instance.new("UIStroke", tpBox)
+strokeTP.Color = Color3.fromRGB(140,40,180)
+order = order + 1
+
+createButton(movimentoFrame, "Teleport", order, function()
+    teleportToPlayer(tpBox.Text)
+end)
+
 
 -- Noclip (salva e restaura colisões)
 local function startNoclip()
