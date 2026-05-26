@@ -1,22 +1,23 @@
 -- Phoenix A hub (versão final unificada)
 -- Coloque este LocalScript em StarterPlayerScripts
--- Recursos: Fly simples, JumpBoost, WalkSpeed (cada um com slider numérico), Noclip em Extras, abas horizontais à direita, UI arredondada
+-- Recursos: Abas horizontais, fonte púrpura, sliders funcionais (mouse + toque),
+-- Movimento: Fly (toggle + slider), WalkSpeed (slider), JumpPower (slider), Teleport, Reset
+-- Extras: Noclip toggle (funcional)
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 
--- Espera personagem e atualiza referências no respawn
-local function waitForCharacter()
-    if player.Character and player.Character.Parent then return player.Character end
-    return player.CharacterAdded:Wait()
+-- Character refs (atualiza no respawn)
+local function getCharacter()
+    local char = player.Character or player.CharacterAdded:Wait()
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    return char, humanoid, hrp
 end
 
-local character = waitForCharacter()
-local humanoid = character:WaitForChild("Humanoid")
-local hrp = character:WaitForChild("HumanoidRootPart")
-
+local character, humanoid, hrp = getCharacter()
 player.CharacterAdded:Connect(function(char)
     character = char
     humanoid = char:WaitForChild("Humanoid")
@@ -47,11 +48,11 @@ title.Size = UDim2.new(1, -160, 0, 48)
 title.Position = UDim2.new(0, 12, 0, 8)
 title.BackgroundTransparency = 1
 title.Text = "Phoenix A"
-title.TextColor3 = Color3.fromRGB(200, 140, 255)
+title.TextColor3 = Color3.fromRGB(180, 0, 180) -- fonte púrpura
 title.TextScaled = true
 title.Font = Enum.Font.SourceSansBold
 
--- Toggle icon (open/close)
+-- Toggle icon (abre/fecha UI)
 local toggleBtn = Instance.new("ImageButton", screenGui)
 toggleBtn.Name = "ToggleLogo"
 toggleBtn.Size = UDim2.new(0, 56, 0, 56)
@@ -72,7 +73,7 @@ end)
 local function makeDraggable(gui)
     local dragging, dragStart, startPos
     gui.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
             dragStart = input.Position
             startPos = gui.Position
@@ -84,7 +85,7 @@ local function makeDraggable(gui)
         end
     end)
     gui.InputChanged:Connect(function(input)
-        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
             local delta = input.Position - dragStart
             gui.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
         end
@@ -99,14 +100,12 @@ tabsContainer.Name = "TabsContainer"
 tabsContainer.Size = UDim2.new(0, 300, 0, 56)
 tabsContainer.Position = UDim2.new(1, -312, 0, 8)
 tabsContainer.BackgroundTransparency = 1
-
 local tabsLayout = Instance.new("UIListLayout", tabsContainer)
 tabsLayout.FillDirection = Enum.FillDirection.Horizontal
 tabsLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
 tabsLayout.SortOrder = Enum.SortOrder.LayoutOrder
 tabsLayout.Padding = UDim.new(0, 8)
 
--- Helper to create tab button (uniform fill)
 local function createTab(name)
     local btn = Instance.new("TextButton", tabsContainer)
     btn.Size = UDim2.new(0, 96, 1, 0)
@@ -114,7 +113,7 @@ local function createTab(name)
     btn.TextScaled = true
     btn.Font = Enum.Font.SourceSansSemibold
     btn.BackgroundColor3 = Color3.fromRGB(28, 48, 88)
-    btn.TextColor3 = Color3.fromRGB(240,240,240)
+    btn.TextColor3 = Color3.fromRGB(180, 0, 180) -- fonte púrpura
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
     local stroke = Instance.new("UIStroke", btn)
     stroke.Thickness = 1
@@ -128,14 +127,13 @@ local movimentoTab = createTab("Movimento")
 local visualTab = createTab("Visual")
 local extrasTab = createTab("Extras")
 
--- Content frames (left area)
+-- Content frames (scrolling)
 local function createContentFrame()
     local sf = Instance.new("ScrollingFrame", frame)
     sf.Size = UDim2.new(1, -24, 1, -80)
     sf.Position = UDim2.new(0, 12, 0, 64)
     sf.BackgroundColor3 = Color3.fromRGB(18, 30, 56)
     sf.ScrollBarThickness = 6
-    sf.CanvasSize = UDim2.new(0,0,0,0)
     sf.AutomaticCanvasSize = Enum.AutomaticSize.Y
     Instance.new("UICorner", sf).CornerRadius = UDim.new(0, 10)
     local stroke = Instance.new("UIStroke", sf)
@@ -144,7 +142,6 @@ local function createContentFrame()
     local layout = Instance.new("UIListLayout", sf)
     layout.Padding = UDim.new(0, 10)
     layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-    layout.SortOrder = Enum.SortOrder.LayoutOrder
     return sf, layout
 end
 
@@ -171,7 +168,7 @@ extrasTab.MouseButton1Click:Connect(function()
     extrasFrame.Visible = true
 end)
 
--- Helper: styled button
+-- Styled button helper
 local function createButton(parent, text, order, callback)
     local btn = Instance.new("TextButton", parent)
     btn.Size = UDim2.new(0.92, 0, 0, 44)
@@ -196,26 +193,26 @@ local function createButton(parent, text, order, callback)
     return btn
 end
 
--- Helper: create numeric slider (visual bar + draggable knob + numeric TextBox)
-local function createNumericSlider(parent, labelText, defaultValue, minVal, maxVal, order, onChange)
+-- Numeric slider (funcional para mouse e toque) - retorna container e valueBox (opcional)
+local function createSlider(parent, labelText, defaultValue, minVal, maxVal, order, onChange)
     local container = Instance.new("Frame", parent)
-    container.Size = UDim2.new(0.95, 0, 0, 64)
+    container.Size = UDim2.new(0.95,0,0,64)
     container.LayoutOrder = order or 1
     container.BackgroundTransparency = 1
 
     local label = Instance.new("TextLabel", container)
-    label.Size = UDim2.new(0.45, 0, 0, 20)
-    label.Position = UDim2.new(0, 0, 0, 0)
+    label.Size = UDim2.new(0.45,0,0,20)
+    label.Position = UDim2.new(0,0,0,0)
     label.BackgroundTransparency = 1
     label.Text = labelText
-    label.TextColor3 = Color3.fromRGB(230,230,230)
+    label.TextColor3 = Color3.fromRGB(180,0,180)
     label.TextScaled = true
     label.Font = Enum.Font.SourceSansSemibold
 
     local valueBox = Instance.new("TextBox", container)
-    valueBox.Size = UDim2.new(0.22, 0, 0, 28)
-    valueBox.Position = UDim2.new(0.73, 0, 0, 0)
-    valueBox.BackgroundColor3 = Color3.fromRGB(24, 44, 84)
+    valueBox.Size = UDim2.new(0.22,0,0,28)
+    valueBox.Position = UDim2.new(0.73,0,0,0)
+    valueBox.BackgroundColor3 = Color3.fromRGB(24,44,84)
     valueBox.TextColor3 = Color3.fromRGB(240,240,240)
     valueBox.TextScaled = true
     valueBox.Text = tostring(defaultValue)
@@ -224,31 +221,36 @@ local function createNumericSlider(parent, labelText, defaultValue, minVal, maxV
     Instance.new("UICorner", valueBox).CornerRadius = UDim.new(0, 6)
     local vbStroke = Instance.new("UIStroke", valueBox)
     vbStroke.Thickness = 1
-    vbStroke.Color = Color3.fromRGB(140, 40, 180)
+    vbStroke.Color = Color3.fromRGB(140,40,180)
 
     local bar = Instance.new("Frame", container)
-    bar.Size = UDim2.new(0.9, 0, 0, 12)
-    bar.Position = UDim2.new(0.05, 0, 0, 34)
-    bar.BackgroundColor3 = Color3.fromRGB(40, 70, 120)
-    Instance.new("UICorner", bar).CornerRadius = UDim.new(0, 6)
+    bar.Size = UDim2.new(0.9,0,0,12)
+    bar.Position = UDim2.new(0.05,0,0,34)
+    bar.BackgroundColor3 = Color3.fromRGB(40,70,120)
+    Instance.new("UICorner", bar).CornerRadius = UDim.new(0,6)
+
     local fill = Instance.new("Frame", bar)
-    fill.Size = UDim2.new( (defaultValue - minVal) / math.max(1, (maxVal - minVal)), 0, 1, 0)
-    fill.BackgroundColor3 = Color3.fromRGB(160, 80, 220)
-    Instance.new("UICorner", fill).CornerRadius = UDim.new(0, 6)
+    local tInit = (defaultValue - minVal) / math.max(1, (maxVal - minVal))
+    fill.Size = UDim2.new(tInit, 0, 1, 0)
+    fill.BackgroundColor3 = Color3.fromRGB(160,80,220)
+    Instance.new("UICorner", fill).CornerRadius = UDim.new(0,6)
 
     local knob = Instance.new("ImageButton", bar)
-    knob.Size = UDim2.new(0, 16, 0, 16)
-    knob.AnchorPoint = Vector2.new(0.5, 0.5)
-    knob.Position = UDim2.new(fill.Size.X.Scale, 0, 0.5, 0)
-    knob.Image = "rbxassetid://3926305904" -- circle image (Roblox default)
+    knob.Size = UDim2.new(0,16,0,16)
+    knob.AnchorPoint = Vector2.new(0.5,0.5)
+    knob.Position = UDim2.new(tInit, 0, 0.5, 0)
+    knob.Image = "rbxassetid://3926305904"
     knob.BackgroundTransparency = 1
 
-    -- Drag logic
+    -- Drag handling local ao slider
     local dragging = false
+    local inputConn = nil
+
     local function setValueFromX(x)
         local absX = math.clamp(x - bar.AbsolutePosition.X, 0, bar.AbsoluteSize.X)
-        local t = absX / bar.AbsoluteSize.X
-        local value = math.floor((minVal + (maxVal - minVal) * t) + 0.5)
+        local t = (bar.AbsoluteSize.X > 0) and (absX / bar.AbsoluteSize.X) or 0
+        t = math.clamp(t, 0, 1)
+        local value = math.floor(minVal + (maxVal - minVal) * t + 0.5)
         fill.Size = UDim2.new(t, 0, 1, 0)
         knob.Position = UDim2.new(t, 0, 0.5, 0)
         valueBox.Text = tostring(value)
@@ -256,29 +258,37 @@ local function createNumericSlider(parent, labelText, defaultValue, minVal, maxV
     end
 
     knob.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
+            -- connect InputChanged local
+            inputConn = UserInputService.InputChanged:Connect(function(i)
+                if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+                    setValueFromX(i.Position.X)
+                end
+            end)
         end
     end)
     knob.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = false
-        end
-    end)
-    bar.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            setValueFromX(input.Position.X)
-            dragging = true
-        end
-    end)
-    UserInputService.InputChanged:Connect(function(input)
-        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            setValueFromX(input.Position.X)
+            if inputConn then inputConn:Disconnect() inputConn = nil end
         end
     end)
 
-    -- TextBox manual input
-    valueBox.FocusLost:Connect(function(enter)
+    bar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            setValueFromX(input.Position.X)
+            dragging = true
+            inputConn = UserInputService.InputChanged:Connect(function(i)
+                if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+                    setValueFromX(i.Position.X)
+                end
+            end)
+        end
+    end)
+
+    -- When user types a value manually
+    valueBox.FocusLost:Connect(function()
         local v = tonumber(valueBox.Text)
         if v then
             v = math.clamp(math.floor(v + 0.5), minVal, maxVal)
@@ -314,16 +324,18 @@ local state = {
 -- Update canvas size helper
 local function updateCanvasSize(sf)
     local layout = sf:FindFirstChildOfClass("UIListLayout")
-    if not layout then return end
-    sf.CanvasSize = UDim2.new(0,0,0, layout.AbsoluteContentSize.Y + 12)
+    if layout then
+        sf.CanvasSize = UDim2.new(0,0,0, layout.AbsoluteContentSize.Y + 12)
+    end
 end
 movimentoLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() updateCanvasSize(movimentoFrame) end)
 extrasLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() updateCanvasSize(extrasFrame) end)
+visualLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() updateCanvasSize(visualFrame) end)
 
 -- Key tracking for fly
 local keys = {}
-UserInputService.InputBegan:Connect(function(input, gp)
-    if gp then return end
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
     if input.UserInputType == Enum.UserInputType.Keyboard then
         keys[input.KeyCode] = true
     end
@@ -334,18 +346,19 @@ UserInputService.InputEnded:Connect(function(input)
     end
 end)
 
--- Fly implementation (simple, responsive)
+-- Fly implementation (simple, responsivo)
 local function startFly()
     if state.fly then return end
-    if not hrp then return end
+    character, humanoid, hrp = getCharacter()
+    if not hrp or not humanoid then return end
     state.fly = true
     humanoid.PlatformStand = true
 
-    -- create BodyVelocity and BodyGyro
     local bv = Instance.new("BodyVelocity")
     bv.MaxForce = Vector3.new(1e5, 1e5, 1e5)
     bv.Velocity = Vector3.new(0,0,0)
     bv.Parent = hrp
+
     local bg = Instance.new("BodyGyro")
     bg.MaxTorque = Vector3.new(1e5, 1e5, 1e5)
     bg.CFrame = hrp.CFrame
@@ -381,7 +394,7 @@ end
 
 local function stopFly()
     state.fly = false
-    humanoid.PlatformStand = false
+    if humanoid then humanoid.PlatformStand = false end
     if state.flyConn then state.flyConn:Disconnect() state.flyConn = nil end
     if state.flyBV and state.flyBV.Parent then state.flyBV:Destroy() end
     if state.flyBG and state.flyBG.Parent then state.flyBG:Destroy() end
@@ -389,9 +402,10 @@ local function stopFly()
     state.flyBG = nil
 end
 
--- Noclip implementation (in Extras)
+-- Noclip implementation (Extras)
 local function startNoclip()
     if state.noclip then return end
+    character, humanoid, hrp = getCharacter()
     state.noclip = true
     state.noclipConn = RunService.Stepped:Connect(function()
         if not character then return end
@@ -415,60 +429,56 @@ local function stopNoclip()
     end
 end
 
--- Teleport helper (kept in Movement if needed later)
+-- Teleport helper
 local function teleportToPlayer(name)
     if not name or name == "" then return end
-    local target = nil
     for _, pl in pairs(Players:GetPlayers()) do
         if pl.Name:lower():find(name:lower()) then
-            target = pl
+            if pl.Character and pl.Character:FindFirstChild("HumanoidRootPart") and hrp then
+                hrp.CFrame = pl.Character.HumanoidRootPart.CFrame + Vector3.new(0,3,0)
+            end
             break
         end
-    end
-    if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") and hrp then
-        hrp.CFrame = target.Character.HumanoidRootPart.CFrame + Vector3.new(0,3,0)
     end
 end
 
 -- Reset movement
 local function resetMovement()
-    humanoid.WalkSpeed = 16
-    humanoid.JumpPower = 50
+    character, humanoid, hrp = getCharacter()
+    if humanoid then
+        humanoid.WalkSpeed = 16
+        humanoid.JumpPower = 50
+    end
     state.flySpeed = 60
     stopFly()
     stopNoclip()
 end
 
--- Build Movement UI (all in Movimento tab)
+-- Build Movement UI
 local order = 1
-
--- Fly toggle button
 createButton(movimentoFrame, "Toggle Fly", order, function()
     if state.fly then stopFly() else startFly() end
 end)
 order = order + 1
 
--- Fly speed slider
-createNumericSlider(movimentoFrame, "Fly Speed", 60, 10, 300, order, function(val)
+createSlider(movimentoFrame, "Fly Speed", 60, 10, 300, order, function(val)
     state.flySpeed = val
 end)
 order = order + 1
 
--- WalkSpeed slider
-createNumericSlider(movimentoFrame, "Walk Speed", 16, 8, 200, order, function(val)
+createSlider(movimentoFrame, "Walk Speed", 16, 8, 200, order, function(val)
     state.walkSpeed = val
     if humanoid then humanoid.WalkSpeed = val end
 end)
 order = order + 1
 
--- JumpPower slider
-createNumericSlider(movimentoFrame, "Jump Power", 50, 10, 300, order, function(val)
+createSlider(movimentoFrame, "Jump Power", 50, 10, 300, order, function(val)
     state.jumpPower = val
     if humanoid then humanoid.JumpPower = val end
 end)
 order = order + 1
 
--- Teleport input + button (optional utility)
+-- Teleport input + button
 local tpContainer = Instance.new("Frame", movimentoFrame)
 tpContainer.Size = UDim2.new(0.95, 0, 0, 44)
 tpContainer.LayoutOrder = order
@@ -497,18 +507,17 @@ createButton(movimentoFrame, "Teleport", order, function()
 end)
 order = order + 1
 
--- Reset button
 createButton(movimentoFrame, "Reset Movement", order, function()
     resetMovement()
 end)
 order = order + 1
 
--- Extras tab: Noclip toggle
+-- Extras: Noclip toggle
 createButton(extrasFrame, "Toggle Noclip", 1, function()
     if state.noclip then stopNoclip() else startNoclip() end
 end)
 
--- Visual tab placeholder (ready for expansion)
+-- Visual placeholder
 local placeholder = Instance.new("TextLabel", visualFrame)
 placeholder.Size = UDim2.new(0.9, 0, 0, 44)
 placeholder.LayoutOrder = 1
@@ -518,9 +527,11 @@ placeholder.TextColor3 = Color3.fromRGB(220,220,220)
 placeholder.TextScaled = true
 placeholder.Font = Enum.Font.SourceSans
 
--- Ensure initial values applied
-humanoid.WalkSpeed = state.walkSpeed
-humanoid.JumpPower = state.jumpPower
+-- Apply initial values
+if humanoid then
+    humanoid.WalkSpeed = state.walkSpeed
+    humanoid.JumpPower = state.jumpPower
+end
 
 -- Update canvas sizes initially
 task.delay(0.1, function()
@@ -537,4 +548,4 @@ script.AncestryChanged:Connect(function()
     end
 end)
 
--- Safety note: test in Play Solo before using em servidores públicos
+-- Safety note: teste em Play Solo antes de usar em servidores públicos
