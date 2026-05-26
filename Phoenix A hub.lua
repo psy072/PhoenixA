@@ -1,4 +1,4 @@
--- Phoenix A hub (UI + toggle + drag universal + abas verticais)
+-- Phoenix A hub (UI + toggle + drag universal + abas verticais com borda)
 
 local UserInputService = game:GetService("UserInputService")
 local player = game.Players.LocalPlayer
@@ -7,8 +7,8 @@ screenGui.Parent = player:WaitForChild("PlayerGui")
 
 -- Frame principal
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 300, 0, 200)
-frame.Position = UDim2.new(0.5, -150, 0.5, -100)
+frame.Size = UDim2.new(0, 350, 0, 220)
+frame.Position = UDim2.new(0.5, -175, 0.5, -110)
 frame.BackgroundColor3 = Color3.fromRGB(10, 20, 40)
 frame.Parent = screenGui
 
@@ -92,12 +92,21 @@ end
 makeDraggable(frame)
 makeDraggable(logoToggle)
 
--- Container lateral para abas
+-- Container lateral para abas (vertical à direita)
 local tabContainer = Instance.new("Frame")
 tabContainer.Size = UDim2.new(0, 100, 1, -40)
 tabContainer.Position = UDim2.new(1, -100, 0, 40)
-tabContainer.BackgroundTransparency = 1
+tabContainer.BackgroundColor3 = Color3.fromRGB(10, 20, 40)
 tabContainer.Parent = frame
+
+local tabCorner = Instance.new("UICorner")
+tabCorner.CornerRadius = UDim.new(0, 12)
+tabCorner.Parent = tabContainer
+
+local tabStroke = Instance.new("UIStroke")
+tabStroke.Thickness = 2
+tabStroke.Color = Color3.fromRGB(128, 0, 128)
+tabStroke.Parent = tabContainer
 
 -- Função para criar botão de aba vertical
 local function createTab(name, posY)
@@ -108,6 +117,16 @@ local function createTab(name, posY)
     tabButton.TextScaled = true
     tabButton.BackgroundColor3 = Color3.fromRGB(20, 40, 80)
     tabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+    local bCorner = Instance.new("UICorner")
+    bCorner.CornerRadius = UDim.new(0, 8)
+    bCorner.Parent = tabButton
+
+    local bStroke = Instance.new("UIStroke")
+    bStroke.Thickness = 2
+    bStroke.Color = Color3.fromRGB(128, 0, 128)
+    bStroke.Parent = tabButton
+
     tabButton.Parent = tabContainer
     return tabButton
 end
