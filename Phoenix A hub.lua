@@ -1,10 +1,10 @@
--- Phoenix A Hub (layout vertical de abas)
--- Recursos: WalkSpeed, JumpPower, Noclip, Teleport, Reset
--- Cole este LocalScript em StarterPlayerScripts
+-- Phoenix A Hub (versão corrigida e unificada)
+-- Pronto para rodar como LocalScript (StarterPlayerScripts) ou via loadstring no cliente
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
 local player = Players.LocalPlayer
 
 -- Character refs (atualiza no respawn)
@@ -28,7 +28,15 @@ local state = {
     jumpPower = 50,
     noclip = false,
     noclipConn = nil,
-    savedCollisions = {}
+    savedCollisions = {},
+    espPlayers = false,
+    espNPCs = false,
+    espPlayerHighlights = {},
+    espNPCHighlights = {},
+    fovEnabled = false,
+    fovRadius = 150,
+    fovDrawing = nil,
+    fovConn = nil
 }
 
 -- UI helpers
@@ -53,7 +61,7 @@ local function createButton(parent, text, order, callback)
     btn.LayoutOrder = order or 1
     btn.Text = text
     btn.TextScaled = true
-    btn.Font = Enum.Font.SourceSans
+    btn.Font = Enum.Font.SourceSansSemibold
     btn.BackgroundColor3 = Color3.fromRGB(36, 66, 120)
     btn.TextColor3 = Color3.fromRGB(255,255,255)
     btn.Parent = parent
@@ -84,6 +92,7 @@ local function createSlider(parent, labelText, defaultValue, minVal, maxVal, ord
     label.TextColor3 = Color3.fromRGB(180,0,180)
     label.TextScaled = true
     label.Font = Enum.Font.SourceSansSemibold
+    label.TextXAlignment = Enum.TextXAlignment.Left
 
     local valueBox = Instance.new("TextBox", container)
     valueBox.Size = UDim2.new(0.22,0,0,28)
@@ -177,31 +186,32 @@ local function createSlider(parent, labelText, defaultValue, minVal, maxVal, ord
     return container, valueBox
 end
 
--- UI raiz
+-- Cria GUI direto no PlayerGui
 local screenGui = Instance.new("ScreenGui")
 screenGui.ResetOnSpawn = false
 screenGui.Name = "PhoenixA_Hub"
 screenGui.Parent = player:WaitForChild("PlayerGui")
 
--- Frame principal maior
+-- Frame principal
 local frame = Instance.new("Frame", screenGui)
-frame.Size = UDim2.new(0, 680, 0, 420) -- maior
-frame.Position = UDim2.new(0.5, -340, 0.5, -210)
+frame.Size = UDim2.new(0, 680, 0, 460)
+frame.Position = UDim2.new(0.5, -340, 0.5, -230)
 frame.BackgroundColor3 = Color3.fromRGB(12, 18, 34)
 makeUICorner(frame, 14)
 makeStroke(frame, Color3.fromRGB(140,40,180), 2)
 
--- Título
+-- Título centralizado
 local title = Instance.new("TextLabel", frame)
-title.Size = UDim2.new(1, -200, 0, 48)
-title.Position = UDim2.new(0, 12, 0, 8)
+title.Size = UDim2.new(1, 0, 0, 48)
+title.Position = UDim2.new(0, 0, 0, 8)
 title.BackgroundTransparency = 1
 title.Text = "Phoenix A"
 title.TextColor3 = Color3.fromRGB(180, 0, 180)
 title.TextScaled = true
-title.Font = Enum.Font.SourceSansBold
+title.Font = Enum.Font.SourceSansSemibold
+title.TextXAlignment = Enum.TextXAlignment.Center
 
--- Toggle logo (mantido no mesmo tamanho)
+-- Toggle logo
 local toggleBtn = Instance.new("ImageButton", screenGui)
 toggleBtn.Size = UDim2.new(0, 56, 0, 56)
 toggleBtn.Position = UDim2.new(0, 12, 0, 12)
@@ -240,7 +250,7 @@ end
 makeDraggable(frame)
 makeDraggable(toggleBtn)
 
--- Abas verticais à esquerda (compactas)
+-- Abas verticais à esquerda
 local tabsContainer = Instance.new("Frame", frame)
 tabsContainer.Name = "TabsContainer"
 tabsContainer.Size = UDim2.new(0, 120, 1, -24)
@@ -254,7 +264,7 @@ tabsLayout.Padding = UDim.new(0, 8)
 
 local function createTab(name)
     local btn = Instance.new("TextButton", tabsContainer)
-    btn.Size = UDim2.new(1, 0, 0, 44) -- compacto e vertical
+    btn.Size = UDim2.new(1, 0, 0, 44)
     btn.LayoutOrder = 1
     btn.Text = name
     btn.TextScaled = true
@@ -272,8 +282,9 @@ end
 
 local movimentoTab = createTab("Movimento")
 local extrasTab = createTab("Extras")
+local visualTab = createTab("Visual")
 
--- Área de conteúdo expandida à direita das abas (BLOCO ATUALIZADO)
+-- Área de conteúdo expandida à direita das abas (BLOCO UNIFICADO)
 local contentFrame = Instance.new("Frame", frame)
 contentFrame.Size = UDim2.new(1, -160, 1, -96)
 contentFrame.Position = UDim2.new(0, 144, 0, 64)
@@ -299,22 +310,37 @@ end
 -- Cria as abas de conteúdo como ScrollingFrames
 local movimentoFrame, movimentoLayout = makeContentScrolling(contentFrame)
 local extrasFrame, extrasLayout = makeContentScrolling(contentFrame)
+local visualFrame, visualLayout = makeContentScrolling(contentFrame)
 movimentoFrame.Visible = true
 extrasFrame.Visible = false
+visualFrame.Visible = false
 
 -- Alternância de abas com highlight visual
 movimentoTab.MouseButton1Click:Connect(function()
     movimentoFrame.Visible = true
     extrasFrame.Visible = false
+    visualFrame.Visible = false
     movimentoTab.BackgroundColor3 = Color3.fromRGB(44,74,140)
     extrasTab.BackgroundColor3 = Color3.fromRGB(28,48,88)
+    visualTab.BackgroundColor3 = Color3.fromRGB(28,48,88)
 end)
 
 extrasTab.MouseButton1Click:Connect(function()
     movimentoFrame.Visible = false
     extrasFrame.Visible = true
+    visualFrame.Visible = false
     extrasTab.BackgroundColor3 = Color3.fromRGB(44,74,140)
     movimentoTab.BackgroundColor3 = Color3.fromRGB(28,48,88)
+    visualTab.BackgroundColor3 = Color3.fromRGB(28,48,88)
+end)
+
+visualTab.MouseButton1Click:Connect(function()
+    movimentoFrame.Visible = false
+    extrasFrame.Visible = false
+    visualFrame.Visible = true
+    visualTab.BackgroundColor3 = Color3.fromRGB(44,74,140)
+    movimentoTab.BackgroundColor3 = Color3.fromRGB(28,48,88)
+    extrasTab.BackgroundColor3 = Color3.fromRGB(28,48,88)
 end)
 
 -- Atualiza CanvasSize automaticamente (evita problemas de scroll)
@@ -330,56 +356,11 @@ extrasLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     end
 end)
 
--- Exemplo de como adicionar controles à aba Movimento (substitua/adicione os seus)
-local order = 1
-createButton(movimentoFrame, "Reset Movement", order, function() resetMovement() end)
-order = order + 1
-
-createSlider(movimentoFrame, "Walk Speed", state.walkSpeed, 8, 300, order, function(val)
-    state.walkSpeed = val
-    local _, humanoidLocal = getCharacter()
-    if humanoidLocal then humanoidLocal.WalkSpeed = val end
-end)
-order = order + 1
-
-createSlider(movimentoFrame, "Jump Power", state.jumpPower, 10, 300, order, function(val)
-    state.jumpPower = val
-    local _, humanoidLocal = getCharacter()
-    if humanoidLocal then
-        humanoidLocal.JumpPower = val
-        pcall(function() humanoidLocal.UseJumpPower = true end)
+visualLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    if visualFrame and visualLayout then
+        visualFrame.CanvasSize = UDim2.new(0, 0, 0, visualLayout.AbsoluteContentSize.Y + 12)
     end
 end)
-order = order + 1
-
--- Teleport input + botão (exemplo)
-local tpContainer = Instance.new("Frame", movimentoFrame)
-tpContainer.Size = UDim2.new(0.95, 0, 0, 44)
-tpContainer.LayoutOrder = order
-tpContainer.BackgroundTransparency = 1
-local tpLabel = Instance.new("TextLabel", tpContainer)
-tpLabel.Size = UDim2.new(0.36, 0, 1, 0)
-tpLabel.BackgroundTransparency = 1
-tpLabel.Text = "Teleport to"
-tpLabel.TextColor3 = Color3.fromRGB(230,230,230)
-tpLabel.TextScaled = true
-tpLabel.Font = Enum.Font.SourceSansSemibold
-local tpBox = Instance.new("TextBox", tpContainer)
-tpBox.Size = UDim2.new(0.58, 0, 1, 0)
-tpBox.Position = UDim2.new(0.38, 0, 0, 0)
-tpBox.PlaceholderText = "player name"
-tpBox.Text = ""
-tpBox.TextScaled = true
-tpBox.BackgroundColor3 = Color3.fromRGB(24,44,84)
-makeUICorner(tpBox, 6)
-local strokeTP = Instance.new("UIStroke", tpBox)
-strokeTP.Color = Color3.fromRGB(140,40,180)
-order = order + 1
-
-createButton(movimentoFrame, "Teleport", order, function()
-    teleportToPlayer(tpBox.Text)
-end)
-
 
 -- Noclip (salva e restaura colisões)
 local function startNoclip()
@@ -441,89 +422,271 @@ local function resetMovement()
     stopNoclip()
 end
 
--- Monta UI: sliders e botões no movimentoFrame
-local order = 1
-createButton(movimentoFrame, "Reset Movement", order, function() resetMovement() end)
-order = order + 1
+-- Monta UI: sliders e botões no movimentoFrame (todos parentados corretamente)
+do
+    local order = 1
+    createButton(movimentoFrame, "Reset Movement", order, function() resetMovement() end)
+    order = order + 1
 
-createSlider(movimentoFrame, "Walk Speed", state.walkSpeed, 8, 300, order, function(val)
-    state.walkSpeed = val
-    local _, humanoidLocal = getCharacter()
-    if humanoidLocal then humanoidLocal.WalkSpeed = val end
-end)
-order = order + 1
+    createSlider(movimentoFrame, "Walk Speed", state.walkSpeed, 8, 300, order, function(val)
+        state.walkSpeed = val
+        local _, humanoidLocal = getCharacter()
+        if humanoidLocal then humanoidLocal.WalkSpeed = val end
+    end)
+    order = order + 1
 
-createSlider(movimentoFrame, "Jump Power", state.jumpPower, 10, 300, order, function(val)
-    state.jumpPower = val
-    local _, humanoidLocal = getCharacter()
-    if humanoidLocal then
-        humanoidLocal.JumpPower = val
-        pcall(function() humanoidLocal.UseJumpPower = true end)
-    end
-end)
-order = order + 1
+    createSlider(movimentoFrame, "Jump Power", state.jumpPower, 10, 300, order, function(val)
+        state.jumpPower = val
+        local _, humanoidLocal = getCharacter()
+        if humanoidLocal then
+            humanoidLocal.JumpPower = val
+            pcall(function() humanoidLocal.UseJumpPower = true end)
+        end
+    end)
+    order = order + 1
 
--- Teleport input + button
-local tpContainer = Instance.new("Frame", movimentoFrame)
-tpContainer.Size = UDim2.new(0.95, 0, 0, 44)
-tpContainer.LayoutOrder = order
-tpContainer.BackgroundTransparency = 1
-local tpLabel = Instance.new("TextLabel", tpContainer)
-tpLabel.Size = UDim2.new(0.36, 0, 1, 0)
-tpLabel.BackgroundTransparency = 1
-tpLabel.Text = "Teleport to"
-tpLabel.TextColor3 = Color3.fromRGB(230,230,230)
-tpLabel.TextScaled = true
-local tpBox = Instance.new("TextBox", tpContainer)
-tpBox.Size = UDim2.new(0.58, 0, 1, 0)
-tpBox.Position = UDim2.new(0.38, 0, 0, 0)
-tpBox.PlaceholderText = "player name"
-tpBox.Text = ""
-tpBox.TextScaled = true
-tpBox.BackgroundColor3 = Color3.fromRGB(24,44,84)
-makeUICorner(tpBox, 6)
-makeStroke(tpBox, Color3.fromRGB(140,40,180), 1)
-order = order + 1
+    -- Teleport input + button
+    local tpContainer = Instance.new("Frame", movimentoFrame)
+    tpContainer.Size = UDim2.new(0.95, 0, 0, 44)
+    tpContainer.LayoutOrder = order
+    tpContainer.BackgroundTransparency = 1
 
-createButton(movimentoFrame, "Teleport", order, function()
-    teleportToPlayer(tpBox.Text)
-end)
-order = order + 1
+    local tpLabel = Instance.new("TextLabel", tpContainer)
+    tpLabel.Size = UDim2.new(0.36, 0, 1, 0)
+    tpLabel.BackgroundTransparency = 1
+    tpLabel.Text = "Teleport to"
+    tpLabel.TextColor3 = Color3.fromRGB(230,230,230)
+    tpLabel.TextScaled = true
+    tpLabel.Font = Enum.Font.SourceSansSemibold
 
--- Extras: Noclip toggle
-createButton(extrasFrame, "Toggle Noclip", 1, function()
-    if state.noclip then stopNoclip() else startNoclip() end
-end)
+    local tpBox = Instance.new("TextBox", tpContainer)
+    tpBox.Size = UDim2.new(0.58, 0, 1, 0)
+    tpBox.Position = UDim2.new(0.38, 0, 0, 0)
+    tpBox.PlaceholderText = "player name"
+    tpBox.Text = ""
+    tpBox.TextScaled = true
+    tpBox.BackgroundColor3 = Color3.fromRGB(24,44,84)
+    makeUICorner(tpBox, 6)
+    makeStroke(tpBox, Color3.fromRGB(140,40,180), 1)
+    order = order + 1
 
--- Visual placeholder (Extras)
-local placeholder = Instance.new("TextLabel", extrasFrame)
-placeholder.Size = UDim2.new(0.9, 0, 0, 44)
-placeholder.LayoutOrder = 2
-placeholder.BackgroundTransparency = 1
-placeholder.Text = "Extras: Noclip disponível"
-placeholder.TextColor3 = Color3.fromRGB(220,220,220)
-placeholder.TextScaled = true
-placeholder.Font = Enum.Font.SourceSans
-
--- Apply initial values
-local _, humanoidInit = getCharacter()
-if humanoidInit then
-    humanoidInit.WalkSpeed = state.walkSpeed
-    humanoidInit.JumpPower = state.jumpPower
-    pcall(function() humanoidInit.UseJumpPower = true end)
+    createButton(movimentoFrame, "Teleport", order, function()
+        teleportToPlayer(tpBox.Text)
+    end)
+    order = order + 1
 end
 
--- Ajusta CanvasSize dinamicamente
-task.delay(0.1, function()
-    updateCanvasSize(movimentoFrame)
-    updateCanvasSize(extrasFrame)
-end)
+-- Monta UI: Extras
+do
+    createButton(extrasFrame, "Toggle Noclip", 1, function()
+        if state.noclip then stopNoclip() else startNoclip() end
+    end)
 
--- Cleanup on script removal
-script.AncestryChanged:Connect(function()
-    if not script:IsDescendantOf(game) then
-        stopNoclip()
+    local placeholderExtras = Instance.new("TextLabel", extrasFrame)
+    placeholderExtras.Size = UDim2.new(0.9, 0, 0, 44)
+    placeholderExtras.LayoutOrder = 2
+    placeholderExtras.BackgroundTransparency = 1
+    placeholderExtras.Text = "Extras: Noclip disponível"
+    placeholderExtras.TextColor3 = Color3.fromRGB(220,220,220)
+    placeholderExtras.TextScaled = true
+    placeholderExtras.Font = Enum.Font.SourceSansSemibold
+end
+
+-- Visual functions: Highlight helper
+local function createHighlight(targetModel, color)
+    if not targetModel or not targetModel:IsA("Model") then return nil end
+    local ok, highlight = pcall(function()
+        local h = Instance.new("Highlight")
+        h.Adornee = targetModel
+        h.FillColor = color
+        h.OutlineColor = Color3.new(0,0,0)
+        h.FillTransparency = 0.6
+        h.OutlineTransparency = 0
+        h.Parent = targetModel
+        return h
+    end)
+    if ok then return highlight end
+    return nil
+end
+
+-- ESP Players
+local function enableESPPlayers()
+    if state.espPlayers then return end
+    state.espPlayers = true
+    for _, pl in pairs(Players:GetPlayers()) do
+        if pl ~= player and pl.Character and pl.Character:FindFirstChildOfClass("Humanoid") then
+            local h = createHighlight(pl.Character, Color3.fromRGB(255, 100, 100))
+            if h then state.espPlayerHighlights[pl] = h end
+        end
     end
+    state.espPlayersConn = Players.PlayerAdded:Connect(function(pl)
+        task.wait(0.5)
+        if state.espPlayers and pl.Character and pl.Character:FindFirstChildOfClass("Humanoid") then
+            local h = createHighlight(pl.Character, Color3.fromRGB(255, 100, 100))
+            if h then state.espPlayerHighlights[pl] = h end
+        end
+    end)
+    Players.PlayerRemoving:Connect(function(pl)
+        if state.espPlayerHighlights[pl] then
+            pcall(function() state.espPlayerHighlights[pl]:Destroy() end)
+            state.espPlayerHighlights[pl] = nil
+        end
+    end)
+end
+
+local function disableESPPlayers()
+    state.espPlayers = false
+    if state.espPlayersConn then state.espPlayersConn:Disconnect() state.espPlayersConn = nil end
+    for pl, h in pairs(state.espPlayerHighlights) do
+        if h and h.Parent then pcall(function() h:Destroy() end) end
+        state.espPlayerHighlights[pl] = nil
+    end
+end
+
+-- ESP NPCs
+local function isNPCModel(m)
+    if not m or not m:IsA("Model") then return false end
+    if m:FindFirstChildOfClass("Humanoid") and not Players:GetPlayerFromCharacter(m) then
+        return true
+    end
+    return false
+end
+
+local function addNPCHighlight(m)
+    if not isNPCModel(m) then return end
+    if state.espNPCHighlights[m] then return end
+    local h = createHighlight(m, Color3.fromRGB(100, 200, 255))
+    if h then state.espNPCHighlights[m] = h end
+end
+
+local function removeNPCHighlight(m)
+    local h = state.espNPCHighlights[m]
+    if h and h.Parent then pcall(function() h:Destroy() end) end
+    state.espNPCHighlights[m] = nil
+end
+
+local function enableESPNPCs()
+    if state.espNPCs then return end
+    state.espNPCs = true
+    for _, obj in pairs(Workspace:GetDescendants()) do
+        if obj:IsA("Model") and isNPCModel(obj) then
+            addNPCHighlight(obj)
+        end
+    end
+    state.npcConn = Workspace.DescendantAdded:Connect(function(desc)
+        if desc:IsA("Model") and isNPCModel(desc) then
+            addNPCHighlight(desc)
+        end
+    end)
+    state.npcRemovedConn = Workspace.DescendantRemoving:Connect(function(desc)
+        if state.espNPCHighlights[desc] then
+            removeNPCHighlight(desc)
+        end
+    end)
+end
+
+local function disableESPNPCs()
+    state.espNPCs = false
+    if state.npcConn then state.npcConn:Disconnect() state.npcConn = nil end
+    if state.npcRemovedConn then state.npcRemovedConn:Disconnect() state.npcRemovedConn = nil end
+    for m, h in pairs(state.espNPCHighlights) do
+        if h and h.Parent then pcall(function() h:Destroy() end) end
+        state.espNPCHighlights[m] = nil
+    end
+end
+
+-- FOV Circle (Drawing API if disponível)
+local function createFOVDrawing()
+    local ok, Drawing = pcall(function() return Drawing end)
+    if not ok or not Drawing then return nil end
+    local circle = Drawing.new("Circle")
+    circle.Visible = false
+    circle.Radius = state.fovRadius
+    circle.Color = Color3.new(1, 1, 1)
+    circle.Thickness = 2
+    circle.Filled = false
+    circle.Transparency = 1
+    return circle
+end
+
+local function enableFOV()
+    local ok, Drawing = pcall(function() return Drawing end)
+    if not ok or not Drawing then return end
+    if state.fovEnabled then return end
+    state.fovEnabled = true
+    if not state.fovDrawing then
+        state.fovDrawing = createFOVDrawing()
+    end
+    if state.fovDrawing then
+        state.fovDrawing.Visible = true
+        state.fovDrawing.Radius = state.fovRadius
+    end
+    state.fovConn = RunService.RenderStepped:Connect(function()
+        if not state.fovDrawing then return end
+        local mouse = player:GetMouse()
+        local x, y = mouse.X, mouse.Y
+        state.fovDrawing.Position = Vector2.new(x, y)
+        state.fovDrawing.Radius = state.fovRadius
+    end)
+end
+
+local function disableFOV()
+    state.fovEnabled = false
+    if state.fovConn then state.fovConn:Disconnect() state.fovConn = nil end
+    if state.fovDrawing then
+        pcall(function() state.fovDrawing.Visible = false end)
+    end
+end
+
+-- Monta UI na aba Visual
+do
+    local vOrder = 1
+    createButton(visualFrame, "Toggle ESP Players", vOrder, function()
+        if state.espPlayers then disableESPPlayers() else enableESPPlayers() end
+    end)
+    vOrder = vOrder + 1
+
+    createButton(visualFrame, "Toggle ESP NPCs", vOrder, function()
+        if state.espNPCs then disableESPNPCs() else enableESPNPCs() end
+    end)
+    vOrder = vOrder + 1
+
+    createButton(visualFrame, "Toggle FOV Circle", vOrder, function()
+        if state.fovEnabled then disableFOV() else enableFOV() end
+    end)
+    vOrder = vOrder + 1
+
+    createSlider(visualFrame, "FOV Radius", state.fovRadius, 50, 600, vOrder, function(val)
+        state.fovRadius = val
+        if state.fovDrawing then
+            pcall(function() state.fovDrawing.Radius = val end)
+        end
+    end)
+    vOrder = vOrder + 1
+
+    local placeholderVisual = Instance.new("TextLabel", visualFrame)
+    placeholderVisual.Size = UDim2.new(0.9, 0, 0, 44)
+    placeholderVisual.LayoutOrder = vOrder
+    placeholderVisual.BackgroundTransparency = 1
+    placeholderVisual.Text = "Visual features: ESP e FOV"
+    placeholderVisual.TextColor3 = Color3.fromRGB(220,220,220)
+    placeholderVisual.TextScaled = true
+    placeholderVisual.Font = Enum.Font.SourceSansSemibold
+end
+
+-- Ajusta CanvasSize dinamicamente (inicial)
+task.delay(0.1, function()
+    if visualLayout then visualFrame.CanvasSize = UDim2.new(0,0,0, visualLayout.AbsoluteContentSize.Y + 12) end
 end)
 
--- Safety note: teste em Play Solo antes de usar em servidores públicos
+-- Cleanup on script removal (protegido caso script seja nil)
+if script and typeof(script) == "Instance" then
+    script.AncestryChanged:Connect(function()
+        if not script:IsDescendantOf(game) then
+            stopNoclip()
+            disableESPPlayers()
+            disableESPNPCs()
+            disableFOV()
+        end
+    end)
+end
