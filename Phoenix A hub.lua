@@ -1,13 +1,12 @@
--- Phoenix A hub (versão corrigida)
+-- Phoenix A hub (versão final corrigida)
 -- Coloque este LocalScript em StarterPlayerScripts
--- Correções: Fly responsivo em PC e mobile, JumpPower aplicado corretamente, Noclip salva/restaura colisões
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 
--- Helper para obter referências do personagem (atualiza no respawn)
+-- Helpers de personagem
 local function getCharacter()
     local char = player.Character or player.CharacterAdded:Wait()
     local humanoid = char:FindFirstChildOfClass("Humanoid")
@@ -16,17 +15,30 @@ local function getCharacter()
 end
 
 local character, humanoid, hrp = getCharacter()
+
+-- Estado global
+local state = {
+    fly = false,
+    flySpeed = 60,
+    walkSpeed = 16,
+    jumpPower = 50,
+    noclip = false,
+    flyBV = nil,
+    flyBG = nil,
+    flyConn = nil,
+    noclipConn = nil,
+    savedCollisions = {}
+}
+
+-- Reaplicar valores no respawn
 player.CharacterAdded:Connect(function(char)
     character = char
     humanoid = char:WaitForChild("Humanoid")
     hrp = char:WaitForChild("HumanoidRootPart")
-    -- reaplicar valores atuais após respawn
-    if state then
-        if humanoid then
-            humanoid.WalkSpeed = state.walkSpeed or 16
-            humanoid.JumpPower = state.jumpPower or 50
-            humanoid.UseJumpPower = true
-        end
+    if humanoid then
+        humanoid.WalkSpeed = state.walkSpeed or 16
+        humanoid.JumpPower = state.jumpPower or 50
+        humanoid.UseJumpPower = true
     end
 end)
 
@@ -37,12 +49,11 @@ screenGui.Name = "PhoenixA_Hub"
 screenGui.Parent = player:WaitForChild("PlayerGui")
 
 -- Main frame
-local frame = Instance.new("Frame")
+local frame = Instance.new("Frame", screenGui)
 frame.Name = "MainFrame"
 frame.Size = UDim2.new(0, 520, 0, 360)
 frame.Position = UDim2.new(0.5, -260, 0.5, -180)
 frame.BackgroundColor3 = Color3.fromRGB(12, 18, 34)
-frame.Parent = screenGui
 Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 12)
 local frameStroke = Instance.new("UIStroke", frame)
 frameStroke.Thickness = 2
@@ -84,9 +95,7 @@ local function makeDraggable(gui)
             dragStart = input.Position
             startPos = gui.Position
             input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
+                if input.UserInputState == Enum.UserInputState.End then dragging = false end
             end)
         end
     end)
@@ -199,7 +208,7 @@ local function createButton(parent, text, order, callback)
     return btn
 end
 
--- Numeric slider (mouse + touch) - retorna container e valueBox
+-- Slider funcional (mouse + touch)
 local function createSlider(parent, labelText, defaultValue, minVal, maxVal, order, onChange)
     local container = Instance.new("Frame", parent)
     container.Size = UDim2.new(0.95,0,0,64)
@@ -309,20 +318,6 @@ local function createSlider(parent, labelText, defaultValue, minVal, maxVal, ord
     return container, valueBox
 end
 
--- Movement state
-state = {
-    fly = false,
-    flySpeed = 60,
-    walkSpeed = 16,
-    jumpPower = 50,
-    noclip = false,
-    flyBV = nil,
-    flyBG = nil,
-    flyConn = nil,
-    noclipConn = nil,
-    savedCollisions = {} -- para restaurar colisões originais
-}
-
 -- Update canvas size helper
 local function updateCanvasSize(sf)
     local layout = sf:FindFirstChildOfClass("UIListLayout")
@@ -334,7 +329,7 @@ movimentoLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function
 extrasLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() updateCanvasSize(extrasFrame) end)
 visualLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() updateCanvasSize(visualFrame) end)
 
--- Key tracking for fly (PC)
+-- Key tracking (PC)
 local keys = {}
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
@@ -356,7 +351,6 @@ local function startFly()
     state.fly = true
     humanoid.PlatformStand = true
 
-    -- create BodyVelocity and BodyGyro
     local bv = Instance.new("BodyVelocity")
     bv.MaxForce = Vector3.new(1e5, 1e5, 1e5)
     bv.Velocity = Vector3.new(0,0,0)
@@ -371,12 +365,12 @@ local function startFly()
     state.flyBG = bg
 
     state.flyConn = RunService.RenderStepped:Connect(function()
+        character, humanoid, hrp = getCharacter()
         if not hrp or not humanoid or not state.fly then return end
         local cam = workspace.CurrentCamera
         local forward = cam.CFrame.LookVector
         local right = cam.CFrame.RightVector
 
-        -- movement vector: prefer keyboard keys (PC), fallback to humanoid.MoveDirection (mobile / controller)
         local moveVec = Vector3.new(0,0,0)
         if keys[Enum.KeyCode.W] or keys[Enum.KeyCode.S] or keys[Enum.KeyCode.A] or keys[Enum.KeyCode.D] then
             if keys[Enum.KeyCode.W] then moveVec = moveVec + forward end
@@ -384,24 +378,21 @@ local function startFly()
             if keys[Enum.KeyCode.D] then moveVec = moveVec + right end
             if keys[Enum.KeyCode.A] then moveVec = moveVec - right end
         else
-            -- fallback: use MoveDirection (works with mobile joystick and controller)
             local md = humanoid.MoveDirection
             if md and md.Magnitude > 0 then
-                -- align with camera
-                local camLook = Vector3.new(cam.CFrame.LookVector.X, 0, cam.CFrame.LookVector.Z).Unit
-                local camRight = Vector3.new(cam.CFrame.RightVector.X, 0, cam.CFrame.RightVector.Z).Unit
+                local camLook = Vector3.new(cam.CFrame.LookVector.X, 0, cam.CFrame.LookVector.Z)
+                if camLook.Magnitude > 0 then camLook = camLook.Unit end
+                local camRight = Vector3.new(cam.CFrame.RightVector.X, 0, cam.CFrame.RightVector.Z)
+                if camRight.Magnitude > 0 then camRight = camRight.Unit end
                 moveVec = (camLook * md.Z) + (camRight * md.X)
             end
         end
 
         local vertical = 0
-        -- Jump detection: prefer keyboard space; also check humanoid.Jump if mobile uses jump button
         if keys[Enum.KeyCode.Space] then vertical = vertical + 1 end
         if keys[Enum.KeyCode.LeftShift] or keys[Enum.KeyCode.RightShift] then vertical = vertical - 1 end
-        -- If player pressed the jump action via Humanoid (mobile), use Humanoid:GetState or Jump property
-        if humanoid and humanoid:GetState() == Enum.HumanoidStateType.Jumping then
-            vertical = vertical + 1
-        end
+        if humanoid and humanoid:GetState() == Enum.HumanoidStateType.Jumping then vertical = vertical + 1 end
+        if humanoid and humanoid.Jump then vertical = vertical + 1 end
 
         local dir = Vector3.new(moveVec.X, 0, moveVec.Z)
         if dir.Magnitude > 0 then dir = dir.Unit end
@@ -426,13 +417,12 @@ local function stopFly()
     state.flyBG = nil
 end
 
--- Noclip implementation (salva e restaura colisões)
+-- Noclip (salva e restaura colisões)
 local function startNoclip()
     if state.noclip then return end
     character, humanoid, hrp = getCharacter()
     if not character then return end
     state.noclip = true
-    -- salvar estados originais
     state.savedCollisions = {}
     for _, part in pairs(character:GetDescendants()) do
         if part:IsA("BasePart") then
@@ -440,7 +430,6 @@ local function startNoclip()
             part.CanCollide = false
         end
     end
-    -- manter sem colisão caso novas partes apareçam
     state.noclipConn = RunService.Stepped:Connect(function()
         if not character then return end
         for _, part in pairs(character:GetDescendants()) do
@@ -454,7 +443,6 @@ end
 local function stopNoclip()
     state.noclip = false
     if state.noclipConn then state.noclipConn:Disconnect() state.noclipConn = nil end
-    -- restaurar estados salvos
     if character and state.savedCollisions then
         for part, canCollide in pairs(state.savedCollisions) do
             if part and part:IsA("BasePart") then
@@ -536,4 +524,27 @@ tpLabel.TextColor3 = Color3.fromRGB(230,230,230)
 tpLabel.TextScaled = true
 local tpBox = Instance.new("TextBox", tpContainer)
 tpBox.Size = UDim2.new(0.58, 0, 1, 0)
-tpBox.Posi
+tpBox.Position = UDim2.new(0.38, 0, 0, 0)
+tpBox.PlaceholderText = "player name"
+tpBox.Text = ""
+tpBox.TextScaled = true
+tpBox.BackgroundColor3 = Color3.fromRGB(24,44,84)
+Instance.new("UICorner", tpBox).CornerRadius = UDim.new(0,6)
+local tpStroke = Instance.new("UIStroke", tpBox)
+tpStroke.Thickness = 1
+tpStroke.Color = Color3.fromRGB(140,40,180)
+order = order + 1
+
+createButton(movimentoFrame, "Teleport", order, function()
+    teleportToPlayer(tpBox.Text)
+end)
+order = order + 1
+
+createButton(movimentoFrame, "Reset Movement", order, function()
+    resetMovement()
+end)
+order = order + 1
+
+-- Extras: Noclip toggle
+createButton(extrasFrame, "Toggle Noclip", 1, function()
+    if state.noclip then stopNoclip() 
