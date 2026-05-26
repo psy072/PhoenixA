@@ -1,4 +1,4 @@
--- Phoenix A hub básico (UI + toggle + drag universal)
+-- Phoenix A hub (UI + toggle + drag universal + abas)
 
 local UserInputService = game:GetService("UserInputService")
 local player = game.Players.LocalPlayer
@@ -7,8 +7,8 @@ screenGui.Parent = player:WaitForChild("PlayerGui")
 
 -- Frame principal
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 250, 0, 150)
-frame.Position = UDim2.new(0.5, -125, 0.5, -75)
+frame.Size = UDim2.new(0, 300, 0, 200)
+frame.Position = UDim2.new(0.5, -150, 0.5, -100)
 frame.BackgroundColor3 = Color3.fromRGB(10, 20, 40)
 frame.Parent = screenGui
 
@@ -92,3 +92,63 @@ end
 -- Ativar drag no frame e no toggle
 makeDraggable(frame)
 makeDraggable(logoToggle)
+
+-- Container de abas
+local tabContainer = Instance.new("Frame")
+tabContainer.Size = UDim2.new(1, 0, 0, 40)
+tabContainer.Position = UDim2.new(0, 0, 0, 40)
+tabContainer.BackgroundTransparency = 1
+tabContainer.Parent = frame
+
+-- Função para criar botão de aba
+local function createTab(name, posX)
+    local tabButton = Instance.new("TextButton")
+    tabButton.Size = UDim2.new(0, 90, 1, 0)
+    tabButton.Position = UDim2.new(0, posX, 0, 0)
+    tabButton.Text = name
+    tabButton.TextScaled = true
+    tabButton.BackgroundColor3 = Color3.fromRGB(20, 40, 80)
+    tabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    tabButton.Parent = tabContainer
+    return tabButton
+end
+
+-- Criar abas
+local movimentoTab = createTab("Movimento", 0)
+local visualTab = createTab("Visual", 100)
+local extrasTab = createTab("Extras", 200)
+
+-- Frames de conteúdo
+local movimentoFrame = Instance.new("Frame")
+movimentoFrame.Size = UDim2.new(1, 0, 1, -80)
+movimentoFrame.Position = UDim2.new(0, 0, 0, 80)
+movimentoFrame.BackgroundColor3 = Color3.fromRGB(15, 30, 60)
+movimentoFrame.Visible = true
+movimentoFrame.Parent = frame
+
+local visualFrame = movimentoFrame:Clone()
+visualFrame.Visible = false
+visualFrame.Parent = frame
+
+local extrasFrame = movimentoFrame:Clone()
+extrasFrame.Visible = false
+extrasFrame.Parent = frame
+
+-- Alternar abas
+movimentoTab.MouseButton1Click:Connect(function()
+    movimentoFrame.Visible = true
+    visualFrame.Visible = false
+    extrasFrame.Visible = false
+end)
+
+visualTab.MouseButton1Click:Connect(function()
+    movimentoFrame.Visible = false
+    visualFrame.Visible = true
+    extrasFrame.Visible = false
+end)
+
+extrasTab.MouseButton1Click:Connect(function()
+    movimentoFrame.Visible = false
+    visualFrame.Visible = false
+    extrasFrame.Visible = true
+end)
