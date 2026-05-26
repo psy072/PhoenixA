@@ -1,4 +1,4 @@
--- Phoenix A hub (UI + toggle + drag universal + abas)
+-- Phoenix A hub (UI + toggle + drag universal + abas verticais)
 
 local UserInputService = game:GetService("UserInputService")
 local player = game.Players.LocalPlayer
@@ -53,7 +53,7 @@ logoToggle.MouseButton1Click:Connect(function()
     frame.Visible = uiVisible
 end)
 
--- Função drag universal (PC + celular)
+-- Função drag universal
 local function makeDraggable(guiObject)
     local dragging = false
     local dragStart, startPos
@@ -89,22 +89,21 @@ local function makeDraggable(guiObject)
     end)
 end
 
--- Ativar drag no frame e no toggle
 makeDraggable(frame)
 makeDraggable(logoToggle)
 
--- Container de abas
+-- Container lateral para abas
 local tabContainer = Instance.new("Frame")
-tabContainer.Size = UDim2.new(1, 0, 0, 40)
-tabContainer.Position = UDim2.new(0, 0, 0, 40)
+tabContainer.Size = UDim2.new(0, 100, 1, -40)
+tabContainer.Position = UDim2.new(1, -100, 0, 40)
 tabContainer.BackgroundTransparency = 1
 tabContainer.Parent = frame
 
--- Função para criar botão de aba
-local function createTab(name, posX)
+-- Função para criar botão de aba vertical
+local function createTab(name, posY)
     local tabButton = Instance.new("TextButton")
-    tabButton.Size = UDim2.new(0, 90, 1, 0)
-    tabButton.Position = UDim2.new(0, posX, 0, 0)
+    tabButton.Size = UDim2.new(1, 0, 0, 40)
+    tabButton.Position = UDim2.new(0, 0, 0, posY)
     tabButton.Text = name
     tabButton.TextScaled = true
     tabButton.BackgroundColor3 = Color3.fromRGB(20, 40, 80)
@@ -113,14 +112,14 @@ local function createTab(name, posX)
     return tabButton
 end
 
--- Criar abas
+-- Criar abas verticais
 local movimentoTab = createTab("Movimento", 0)
-local visualTab = createTab("Visual", 100)
-local extrasTab = createTab("Extras", 200)
+local visualTab = createTab("Visual", 50)
+local extrasTab = createTab("Extras", 100)
 
 -- Frames de conteúdo
 local movimentoFrame = Instance.new("Frame")
-movimentoFrame.Size = UDim2.new(1, 0, 1, -80)
+movimentoFrame.Size = UDim2.new(1, -100, 1, -80)
 movimentoFrame.Position = UDim2.new(0, 0, 0, 80)
 movimentoFrame.BackgroundColor3 = Color3.fromRGB(15, 30, 60)
 movimentoFrame.Visible = true
