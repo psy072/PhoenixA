@@ -1,6 +1,7 @@
--- Phoenix A hub 
+-- Phoenix A hub revisado com drag melhorado
 
 local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 local player = game.Players.LocalPlayer
 local screenGui = Instance.new("ScreenGui")
 screenGui.Parent = player:WaitForChild("PlayerGui")
@@ -53,9 +54,10 @@ logoToggle.MouseButton1Click:Connect(function()
     frame.Visible = uiVisible
 end)
 
--- Função drag
+-- Função drag melhorada
 local function makeDraggable(guiObject)
-    local dragging, dragInput, dragStart, startPos
+    local dragging = false
+    local dragStart, startPos
 
     guiObject.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 then
@@ -71,14 +73,8 @@ local function makeDraggable(guiObject)
         end
     end)
 
-    guiObject.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement then
-            dragInput = input
-        end
-    end)
-
     UserInputService.InputChanged:Connect(function(input)
-        if input == dragInput and dragging then
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
             local delta = input.Position - dragStart
             guiObject.Position = UDim2.new(
                 startPos.X.Scale,
