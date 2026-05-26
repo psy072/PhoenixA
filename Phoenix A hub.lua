@@ -1,4 +1,4 @@
--- Phoenix A hub (UI + toggle + drag universal + abas verticais com borda)
+-- Phoenix A hub (UI + toggle + drag universal + abas verticais com bordas arredondadas e funções de movimento)
 
 local UserInputService = game:GetService("UserInputService")
 local player = game.Players.LocalPlayer
@@ -7,8 +7,8 @@ screenGui.Parent = player:WaitForChild("PlayerGui")
 
 -- Frame principal
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 350, 0, 220)
-frame.Position = UDim2.new(0.5, -175, 0.5, -110)
+frame.Size = UDim2.new(0, 400, 0, 250)
+frame.Position = UDim2.new(0.5, -200, 0.5, -125)
 frame.BackgroundColor3 = Color3.fromRGB(10, 20, 40)
 frame.Parent = screenGui
 
@@ -30,7 +30,7 @@ title.TextScaled = true
 title.Font = Enum.Font.SourceSansBold
 title.Parent = frame
 
--- Botão toggle (logo)
+-- Toggle logo
 local logoToggle = Instance.new("ImageButton")
 logoToggle.Size = UDim2.new(0, 60, 0, 60)
 logoToggle.Position = UDim2.new(0, 10, 0, 10)
@@ -57,7 +57,6 @@ end)
 local function makeDraggable(guiObject)
     local dragging = false
     local dragStart, startPos
-
     local function update(input)
         local delta = input.Position - dragStart
         guiObject.Position = UDim2.new(
@@ -67,13 +66,11 @@ local function makeDraggable(guiObject)
             startPos.Y.Offset + delta.Y
         )
     end
-
     guiObject.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
             dragStart = input.Position
             startPos = guiObject.Position
-
             input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
                     dragging = false
@@ -81,7 +78,6 @@ local function makeDraggable(guiObject)
             end)
         end
     end)
-
     guiObject.InputChanged:Connect(function(input)
         if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
             update(input)
@@ -92,10 +88,10 @@ end
 makeDraggable(frame)
 makeDraggable(logoToggle)
 
--- Container lateral para abas (vertical à direita)
+-- Container lateral para abas
 local tabContainer = Instance.new("Frame")
-tabContainer.Size = UDim2.new(0, 100, 1, -40)
-tabContainer.Position = UDim2.new(1, -100, 0, 40)
+tabContainer.Size = UDim2.new(0, 120, 1, -40)
+tabContainer.Position = UDim2.new(1, -120, 0, 40)
 tabContainer.BackgroundColor3 = Color3.fromRGB(10, 20, 40)
 tabContainer.Parent = frame
 
@@ -137,20 +133,32 @@ local visualTab = createTab("Visual", 50)
 local extrasTab = createTab("Extras", 100)
 
 -- Frames de conteúdo
-local movimentoFrame = Instance.new("Frame")
-movimentoFrame.Size = UDim2.new(1, -100, 1, -80)
-movimentoFrame.Position = UDim2.new(0, 0, 0, 80)
-movimentoFrame.BackgroundColor3 = Color3.fromRGB(15, 30, 60)
+local function createContentFrame()
+    local contentFrame = Instance.new("ScrollingFrame")
+    contentFrame.Size = UDim2.new(1, -120, 1, -80)
+    contentFrame.Position = UDim2.new(0, 0, 0, 80)
+    contentFrame.BackgroundColor3 = Color3.fromRGB(15, 30, 60)
+    contentFrame.ScrollBarThickness = 6
+    contentFrame.CanvasSize = UDim2.new(0,0,0,0)
+    contentFrame.Visible = false
+    contentFrame.Parent = frame
+
+    local fCorner = Instance.new("UICorner")
+    fCorner.CornerRadius = UDim.new(0, 12)
+    fCorner.Parent = contentFrame
+
+    local fStroke = Instance.new("UIStroke")
+    fStroke.Thickness = 2
+    fStroke.Color = Color3.fromRGB(128, 0, 128)
+    fStroke.Parent = contentFrame
+
+    return contentFrame
+end
+
+local movimentoFrame = createContentFrame()
 movimentoFrame.Visible = true
-movimentoFrame.Parent = frame
-
-local visualFrame = movimentoFrame:Clone()
-visualFrame.Visible = false
-visualFrame.Parent = frame
-
-local extrasFrame = movimentoFrame:Clone()
-extrasFrame.Visible = false
-extrasFrame.Parent = frame
+local visualFrame = createContentFrame()
+local extrasFrame = createContentFrame()
 
 -- Alternar abas
 movimentoTab.MouseButton1Click:Connect(function()
@@ -158,15 +166,64 @@ movimentoTab.MouseButton1Click:Connect(function()
     visualFrame.Visible = false
     extrasFrame.Visible = false
 end)
-
 visualTab.MouseButton1Click:Connect(function()
     movimentoFrame.Visible = false
     visualFrame.Visible = true
     extrasFrame.Visible = false
 end)
-
 extrasTab.MouseButton1Click:Connect(function()
     movimentoFrame.Visible = false
     visualFrame.Visible = false
     extrasFrame.Visible = true
 end)
+
+-- Função para criar botões dentro da aba Movimento
+local function createButton(parent, text, posY, callback)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0.8, 0, 0, 40)
+    btn.Position = UDim2.new(0.1, 0, 0, posY)
+    btn.Text = text
+    btn.TextScaled = true
+    btn.BackgroundColor3 = Color3.fromRGB(30, 60, 120)
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+    local bCorner = Instance.new("UICorner")
+    bCorner.CornerRadius = UDim.new(0, 8)
+    bCorner.Parent = btn
+
+    local bStroke = Instance.new("UIStroke")
+    bStroke.Thickness = 2
+    bStroke.Color = Color3.fromRGB(128, 0, 128)
+    bStroke.Parent = btn
+
+    btn.Parent = parent
+    btn.MouseButton1Click:Connect(callback)
+    return btn
+end
+
+-- Funções funcionais em Movimento
+local humanoid = player.Character:WaitForChild("Humanoid")
+
+createButton(movimentoFrame, "Fly", 0, function()
+    humanoid.PlatformStand = not humanoid.PlatformStand
+    if humanoid.PlatformStand then
+        local bv = Instance.new("BodyVelocity", player.Character.HumanoidRootPart)
+        bv.MaxForce = Vector3.new(4000,4000,4000)
+        bv.Velocity = Vector3.new(0,0,0)
+    else
+        if player.Character.HumanoidRootPart:FindFirstChild("BodyVelocity") then
+            player.Character.HumanoidRootPart.BodyVelocity:Destroy()
+        end
+    end
+end)
+
+createButton(movimentoFrame, "Speed", 50, function()
+    humanoid.WalkSpeed = 50
+end)
+
+createButton(movimentoFrame, "JumpBoost", 100, function()
+    humanoid.JumpPower = 150
+end)
+
+createButton(movimentoFrame, "Noclip", 150, function()
+    local noclip = true
