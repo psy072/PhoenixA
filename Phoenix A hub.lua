@@ -1,4 +1,4 @@
--- Phoenix A hub revisado com drag melhorado
+-- Phoenix A hub com drag para PC e celular
 
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
@@ -54,13 +54,23 @@ logoToggle.MouseButton1Click:Connect(function()
     frame.Visible = uiVisible
 end)
 
--- Função drag melhorada
+-- Função drag com suporte PC + celular
 local function makeDraggable(guiObject)
     local dragging = false
     local dragStart, startPos
 
+    local function update(input)
+        local delta = input.Position - dragStart
+        guiObject.Position = UDim2.new(
+            startPos.X.Scale,
+            startPos.X.Offset + delta.X,
+            startPos.Y.Scale,
+            startPos.Y.Offset + delta.Y
+        )
+    end
+
     guiObject.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
             dragStart = input.Position
             startPos = guiObject.Position
@@ -73,15 +83,13 @@ local function makeDraggable(guiObject)
         end
     end)
 
-    UserInputService.InputChanged:Connect(function(input)
-        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            local delta = input.Position - dragStart
-            guiObject.Position = UDim2.new(
-                startPos.X.Scale,
-                startPos.X.Offset + delta.X,
-                startPos.Y.Scale,
-                startPos.Y.Offset + delta.Y
-            )
+    guiObject.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            RunService.RenderStepped:Connect(function()
+                if dragging then
+                    update(input)
+                end
+            end)
         end
     end)
 end
