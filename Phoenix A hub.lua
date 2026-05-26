@@ -1,6 +1,5 @@
--- Phoenix A Hub (versão sem Fly)
--- Recursos: WalkSpeed, JumpBoost, Noclip
--- UI: abas horizontais, sliders, fonte púrpura
+-- Phoenix A Hub (layout vertical de abas)
+-- Recursos: WalkSpeed, JumpPower, Noclip, Teleport, Reset
 -- Cole este LocalScript em StarterPlayerScripts
 
 local Players = game:GetService("Players")
@@ -8,7 +7,7 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 
--- Character refs
+-- Character refs (atualiza no respawn)
 local function getCharacter()
     local char = player.Character or player.CharacterAdded:Wait()
     local humanoid = char:FindFirstChildOfClass("Humanoid")
@@ -69,39 +68,6 @@ local function createButton(parent, text, order, callback)
         if callback then pcall(callback) end
     end)
     return btn
-end
-
-local function createToggle(parent, labelText, defaultState, order, callback)
-    local container = Instance.new("Frame")
-    container.Size = UDim2.new(0.95, 0, 0, 36)
-    container.LayoutOrder = order or 1
-    container.BackgroundTransparency = 1
-    container.Parent = parent
-
-    local label = Instance.new("TextLabel", container)
-    label.Size = UDim2.new(0.7, 0, 1, 0)
-    label.BackgroundTransparency = 1
-    label.Text = labelText
-    label.TextColor3 = Color3.fromRGB(180,0,180)
-    label.TextScaled = true
-    label.Font = Enum.Font.SourceSansSemibold
-
-    local toggle = Instance.new("TextButton", container)
-    toggle.Size = UDim2.new(0.28, 0, 0.9, 0)
-    toggle.Position = UDim2.new(0.72, 0, 0.05, 0)
-    toggle.Text = defaultState and "ON" or "OFF"
-    toggle.TextScaled = true
-    toggle.Font = Enum.Font.SourceSansBold
-    toggle.BackgroundColor3 = defaultState and Color3.fromRGB(80,180,120) or Color3.fromRGB(180,60,60)
-    makeUICorner(toggle, 8)
-    makeStroke(toggle)
-    toggle.MouseButton1Click:Connect(function()
-        defaultState = not defaultState
-        toggle.Text = defaultState and "ON" or "OFF"
-        toggle.BackgroundColor3 = defaultState and Color3.fromRGB(80,180,120) or Color3.fromRGB(180,60,60)
-        if callback then pcall(callback, defaultState) end
-    end)
-    return container, toggle
 end
 
 local function createSlider(parent, labelText, defaultValue, minVal, maxVal, order, onChange)
@@ -217,17 +183,17 @@ screenGui.ResetOnSpawn = false
 screenGui.Name = "PhoenixA_Hub"
 screenGui.Parent = player:WaitForChild("PlayerGui")
 
--- Frame principal
+-- Frame principal maior
 local frame = Instance.new("Frame", screenGui)
-frame.Size = UDim2.new(0, 520, 0, 360)
-frame.Position = UDim2.new(0.5, -260, 0.5, -180)
+frame.Size = UDim2.new(0, 680, 0, 420) -- maior
+frame.Position = UDim2.new(0.5, -340, 0.5, -210)
 frame.BackgroundColor3 = Color3.fromRGB(12, 18, 34)
-makeUICorner(frame, 12)
+makeUICorner(frame, 14)
 makeStroke(frame, Color3.fromRGB(140,40,180), 2)
 
 -- Título
 local title = Instance.new("TextLabel", frame)
-title.Size = UDim2.new(1, -160, 0, 48)
+title.Size = UDim2.new(1, -200, 0, 48)
 title.Position = UDim2.new(0, 12, 0, 8)
 title.BackgroundTransparency = 1
 title.Text = "Phoenix A"
@@ -235,7 +201,7 @@ title.TextColor3 = Color3.fromRGB(180, 0, 180)
 title.TextScaled = true
 title.Font = Enum.Font.SourceSansBold
 
--- Toggle logo
+-- Toggle logo (mantido no mesmo tamanho)
 local toggleBtn = Instance.new("ImageButton", screenGui)
 toggleBtn.Size = UDim2.new(0, 56, 0, 56)
 toggleBtn.Position = UDim2.new(0, 12, 0, 12)
@@ -274,19 +240,22 @@ end
 makeDraggable(frame)
 makeDraggable(toggleBtn)
 
--- Abas
+-- Abas verticais à esquerda (compactas)
 local tabsContainer = Instance.new("Frame", frame)
-tabsContainer.Size = UDim2.new(0, 300, 0, 56)
-tabsContainer.Position = UDim2.new(1, -312, 0, 8)
+tabsContainer.Name = "TabsContainer"
+tabsContainer.Size = UDim2.new(0, 120, 1, -24)
+tabsContainer.Position = UDim2.new(0, 12, 0, 64)
 tabsContainer.BackgroundTransparency = 1
 local tabsLayout = Instance.new("UIListLayout", tabsContainer)
-tabsLayout.FillDirection = Enum.FillDirection.Horizontal
-tabsLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
+tabsLayout.FillDirection = Enum.FillDirection.Vertical
+tabsLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+tabsLayout.SortOrder = Enum.SortOrder.LayoutOrder
 tabsLayout.Padding = UDim.new(0, 8)
 
 local function createTab(name)
     local btn = Instance.new("TextButton", tabsContainer)
-    btn.Size = UDim2.new(0, 96, 1, 0)
+    btn.Size = UDim2.new(1, 0, 0, 44) -- compacto e vertical
+    btn.LayoutOrder = 1
     btn.Text = name
     btn.TextScaled = true
     btn.Font = Enum.Font.SourceSansSemibold
@@ -304,11 +273,16 @@ end
 local movimentoTab = createTab("Movimento")
 local extrasTab = createTab("Extras")
 
--- Frames de conteúdo
-local function createContentFrame()
-    local sf = Instance.new("ScrollingFrame", frame)
-    sf.Size = UDim2.new(1, -24, 1, -80)
-    sf.Position = UDim2.new(0, 12, 0, 64)
+-- Área de conteúdo expandida à direita das abas
+local contentFrame = Instance.new("Frame", frame)
+contentFrame.Size = UDim2.new(1, -160, 1, -96) -- ocupa o restante do espaço
+contentFrame.Position = UDim2.new(0, 144, 0, 64)
+contentFrame.BackgroundTransparency = 1
+
+local function createContentScroll(parent)
+    local sf = Instance.new("ScrollingFrame", parent)
+    sf.Size = UDim2.new(1, 0, 1, 0)
+    sf.Position = UDim2.new(0, 0, 0, 0)
     sf.BackgroundColor3 = Color3.fromRGB(18, 30, 56)
     sf.ScrollBarThickness = 6
     sf.AutomaticCanvasSize = Enum.AutomaticSize.Y
@@ -321,18 +295,23 @@ local function createContentFrame()
     return sf, layout
 end
 
-local movimentoFrame, movimentoLayout = createContentFrame()
-local extrasFrame, extrasLayout = createContentFrame()
+local movimentoFrame, movimentoLayout = createContentScroll(contentFrame)
+local extrasFrame, extrasLayout = createContentScroll(contentFrame)
 movimentoFrame.Visible = true
 extrasFrame.Visible = false
 
 movimentoTab.MouseButton1Click:Connect(function()
     movimentoFrame.Visible = true
     extrasFrame.Visible = false
+    -- highlight tab
+    movimentoTab.BackgroundColor3 = Color3.fromRGB(44,74,140)
+    extrasTab.BackgroundColor3 = Color3.fromRGB(28,48,88)
 end)
 extrasTab.MouseButton1Click:Connect(function()
     movimentoFrame.Visible = false
     extrasFrame.Visible = true
+    extrasTab.BackgroundColor3 = Color3.fromRGB(44,74,140)
+    movimentoTab.BackgroundColor3 = Color3.fromRGB(28,48,88)
 end)
 
 -- Update canvas size helper
@@ -359,7 +338,7 @@ local function startNoclip()
         end
     end
     state.noclipConn = RunService.Stepped:Connect(function()
-        local c = getCharacter()
+        local c = player.Character
         if not c then return end
         for _, part in pairs(c:GetDescendants()) do
             if part:IsA("BasePart") then part.CanCollide = false end
@@ -405,7 +384,7 @@ local function resetMovement()
     stopNoclip()
 end
 
--- Monta UI: sliders e botões
+-- Monta UI: sliders e botões no movimentoFrame
 local order = 1
 createButton(movimentoFrame, "Reset Movement", order, function() resetMovement() end)
 order = order + 1
