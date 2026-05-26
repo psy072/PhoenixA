@@ -2,11 +2,11 @@
 local screenGui = Instance.new("ScreenGui")
 screenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
 
--- Criando o Frame principal (UI Quincy)
+-- Criando o Frame principal (UI Phoenix A)
 local frame = Instance.new("Frame")
 frame.Size = UDim2.new(0, 250, 0, 150)
 frame.Position = UDim2.new(0.5, -125, 0.5, -75)
-frame.BackgroundColor3 = Color3.fromRGB(10, 20, 40) -- azul escuro
+frame.BackgroundColor3 = Color3.fromRGB(10, 20, 40) -- azul marinho
 frame.Parent = screenGui
 
 -- UICorner e UIStroke no Frame
@@ -16,25 +16,25 @@ corner.Parent = frame
 
 local stroke = Instance.new("UIStroke")
 stroke.Thickness = 2
-stroke.Color = Color3.fromRGB(255, 215, 0) -- dourado
+stroke.Color = Color3.fromRGB(128, 0, 128) -- púrpura
 stroke.Parent = frame
 
--- Título dourado
+-- Título púrpura
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0, 40)
 title.Position = UDim2.new(0, 0, 0, 0)
 title.BackgroundTransparency = 1
-title.Text = "Quincy"
-title.TextColor3 = Color3.fromRGB(255, 215, 0)
+title.Text = "Phoenix A"
+title.TextColor3 = Color3.fromRGB(128, 0, 128) -- púrpura
 title.TextScaled = true
 title.Font = Enum.Font.SourceSansBold
 title.Parent = frame
 
--- Botão de toggle isolado (logo Quincy)
+-- Botão de toggle isolado (logo Phoenix A)
 local logoToggle = Instance.new("ImageButton")
 logoToggle.Size = UDim2.new(0, 60, 0, 60)
 logoToggle.Position = UDim2.new(0, 10, 0, 10) -- canto superior esquerdo da tela
-logoToggle.Image = "rbxassetid://91771463650036" -- TextureId correto da logo
+logoToggle.Image = "rbxassetid://126836694733781" -- TextureId da nova logo Phoenix A
 logoToggle.Parent = screenGui
 
 local logoCorner = Instance.new("UICorner")
@@ -43,7 +43,7 @@ logoCorner.Parent = logoToggle
 
 local logoStroke = Instance.new("UIStroke")
 logoStroke.Thickness = 2
-logoStroke.Color = Color3.fromRGB(255, 215, 0)
+logoStroke.Color = Color3.fromRGB(128, 0, 128) -- púrpura
 logoStroke.Parent = logoToggle
 
 -- Função para esconder/mostrar o Frame
