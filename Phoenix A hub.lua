@@ -1,5 +1,4 @@
--- Phoenix A Hub (UI atualizada com aba Visual e funções)
--- Recursos: WalkSpeed, JumpPower, Noclip, Teleport, Reset, ESP Players, ESP NPCs, FOV Circle
+-- Phoenix A Hub (UI final revisada)
 -- LocalScript -> StarterPlayerScripts
 
 local Players = game:GetService("Players")
@@ -34,7 +33,9 @@ local state = {
     espNPCs = false,
     espPlayerHighlights = {},
     espNPCHighlights = {},
+    espPlayersConn = nil,
     npcConn = nil,
+    npcRemovedConn = nil,
     fovEnabled = false,
     fovRadius = 150,
     fovDrawing = nil,
@@ -371,73 +372,79 @@ local function resetMovement()
     stopNoclip()
 end
 
--- Monta UI: sliders e botões no movimentoFrame
-local order = 1
-createButton(movimentoFrame, "Reset Movement", order, function() resetMovement() end)
-order = order + 1
+-- Monta UI: Movimento (garante LayoutOrder e visibilidade)
+do
+    local order = 1
+    createButton(movimentoFrame, "Reset Movement", order, function() resetMovement() end)
+    order = order + 1
 
-createSlider(movimentoFrame, "Walk Speed", state.walkSpeed, 8, 300, order, function(val)
-    state.walkSpeed = val
-    local _, humanoidLocal = getCharacter()
-    if humanoidLocal then humanoidLocal.WalkSpeed = val end
-end)
-order = order + 1
+    createSlider(movimentoFrame, "Walk Speed", state.walkSpeed, 8, 300, order, function(val)
+        state.walkSpeed = val
+        local _, humanoidLocal = getCharacter()
+        if humanoidLocal then humanoidLocal.WalkSpeed = val end
+    end)
+    order = order + 1
 
-createSlider(movimentoFrame, "Jump Power", state.jumpPower, 10, 300, order, function(val)
-    state.jumpPower = val
-    local _, humanoidLocal = getCharacter()
-    if humanoidLocal then
-        humanoidLocal.JumpPower = val
-        pcall(function() humanoidLocal.UseJumpPower = true end)
-    end
-end)
-order = order + 1
+    createSlider(movimentoFrame, "Jump Power", state.jumpPower, 10, 300, order, function(val)
+        state.jumpPower = val
+        local _, humanoidLocal = getCharacter()
+        if humanoidLocal then
+            humanoidLocal.JumpPower = val
+            pcall(function() humanoidLocal.UseJumpPower = true end)
+        end
+    end)
+    order = order + 1
 
--- Teleport input + button
-local tpContainer = Instance.new("Frame", movimentoFrame)
-tpContainer.Size = UDim2.new(0.95, 0, 0, 44)
-tpContainer.LayoutOrder = order
-tpContainer.BackgroundTransparency = 1
-local tpLabel = Instance.new("TextLabel", tpContainer)
-tpLabel.Size = UDim2.new(0.36, 0, 1, 0)
-tpLabel.BackgroundTransparency = 1
-tpLabel.Text = "Teleport to"
-tpLabel.TextColor3 = Color3.fromRGB(230,230,230)
-tpLabel.TextScaled = true
-tpLabel.Font = Enum.Font.SourceSansSemibold
-local tpBox = Instance.new("TextBox", tpContainer)
-tpBox.Size = UDim2.new(0.58, 0, 1, 0)
-tpBox.Position = UDim2.new(0.38, 0, 0, 0)
-tpBox.PlaceholderText = "player name"
-tpBox.Text = ""
-tpBox.TextScaled = true
-tpBox.BackgroundColor3 = Color3.fromRGB(24,44,84)
-makeUICorner(tpBox, 6)
-makeStroke(tpBox, Color3.fromRGB(140,40,180), 1)
-order = order + 1
+    -- Teleport input + button (organizado dentro do movimentoFrame)
+    local tpContainer = Instance.new("Frame", movimentoFrame)
+    tpContainer.Size = UDim2.new(0.95, 0, 0, 44)
+    tpContainer.LayoutOrder = order
+    tpContainer.BackgroundTransparency = 1
 
-createButton(movimentoFrame, "Teleport", order, function()
-    teleportToPlayer(tpBox.Text)
-end)
-order = order + 1
+    local tpLabel = Instance.new("TextLabel", tpContainer)
+    tpLabel.Size = UDim2.new(0.36, 0, 1, 0)
+    tpLabel.BackgroundTransparency = 1
+    tpLabel.Text = "Teleport to"
+    tpLabel.TextColor3 = Color3.fromRGB(230,230,230)
+    tpLabel.TextScaled = true
+    tpLabel.Font = Enum.Font.SourceSansSemibold
+    tpLabel.TextXAlignment = Enum.TextXAlignment.Left
 
--- Extras: Noclip toggle
-createButton(extrasFrame, "Toggle Noclip", 1, function()
-    if state.noclip then stopNoclip() else startNoclip() end
-end)
+    local tpBox = Instance.new("TextBox", tpContainer)
+    tpBox.Size = UDim2.new(0.58, 0, 1, 0)
+    tpBox.Position = UDim2.new(0.38, 0, 0, 0)
+    tpBox.PlaceholderText = "player name"
+    tpBox.Text = ""
+    tpBox.TextScaled = true
+    tpBox.BackgroundColor3 = Color3.fromRGB(24,44,84)
+    tpBox.Font = Enum.Font.SourceSansSemibold
+    makeUICorner(tpBox, 6)
+    makeStroke(tpBox, Color3.fromRGB(140,40,180), 1)
+    order = order + 1
 
-local placeholderExtras = Instance.new("TextLabel", extrasFrame)
-placeholderExtras.Size = UDim2.new(0.9, 0, 0, 44)
-placeholderExtras.LayoutOrder = 2
-placeholderExtras.BackgroundTransparency = 1
-placeholderExtras.Text = "Extras: Noclip disponível"
-placeholderExtras.TextColor3 = Color3.fromRGB(220,220,220)
-placeholderExtras.TextScaled = true
-placeholderExtras.Font = Enum.Font.SourceSansSemibold
+    createButton(movimentoFrame, "Teleport", order, function()
+        teleportToPlayer(tpBox.Text)
+    end)
+    order = order + 1
+end
 
--- Visual functions: ESP Players, ESP NPCs, FOV Circle
+-- Monta UI: Extras
+do
+    createButton(extrasFrame, "Toggle Noclip", 1, function()
+        if state.noclip then stopNoclip() else startNoclip() end
+    end)
 
--- Helper to create Highlight safely
+    local placeholderExtras = Instance.new("TextLabel", extrasFrame)
+    placeholderExtras.Size = UDim2.new(0.9, 0, 0, 44)
+    placeholderExtras.LayoutOrder = 2
+    placeholderExtras.BackgroundTransparency = 1
+    placeholderExtras.Text = "Extras: Noclip disponível"
+    placeholderExtras.TextColor3 = Color3.fromRGB(220,220,220)
+    placeholderExtras.TextScaled = true
+    placeholderExtras.Font = Enum.Font.SourceSansSemibold
+end
+
+-- Visual functions: Highlight helper
 local function createHighlight(targetModel, color)
     if not targetModel or not targetModel:IsA("Model") then return nil end
     local ok, highlight = pcall(function()
@@ -464,7 +471,6 @@ local function enableESPPlayers()
             if h then state.espPlayerHighlights[pl] = h end
         end
     end
-    -- connect to new players
     state.espPlayersConn = Players.PlayerAdded:Connect(function(pl)
         task.wait(0.5)
         if state.espPlayers and pl.Character and pl.Character:FindFirstChildOfClass("Humanoid") then
@@ -472,10 +478,12 @@ local function enableESPPlayers()
             if h then state.espPlayerHighlights[pl] = h end
         end
     end)
-    -- handle character respawn for existing players
-    for pl, _ in pairs(state.espPlayerHighlights) do
-        -- nothing; highlights are parented to model and will follow
-    end
+    Players.PlayerRemoving:Connect(function(pl)
+        if state.espPlayerHighlights[pl] then
+            pcall(function() state.espPlayerHighlights[pl]:Destroy() end)
+            state.espPlayerHighlights[pl] = nil
+        end
+    end)
 end
 
 local function disableESPPlayers()
@@ -512,19 +520,16 @@ end
 local function enableESPNPCs()
     if state.espNPCs then return end
     state.espNPCs = true
-    -- add existing NPCs
     for _, obj in pairs(Workspace:GetDescendants()) do
         if obj:IsA("Model") and isNPCModel(obj) then
             addNPCHighlight(obj)
         end
     end
-    -- listen for new NPCs
     state.npcConn = Workspace.DescendantAdded:Connect(function(desc)
         if desc:IsA("Model") and isNPCModel(desc) then
             addNPCHighlight(desc)
         end
     end)
-    -- cleanup when NPC removed
     state.npcRemovedConn = Workspace.DescendantRemoving:Connect(function(desc)
         if state.espNPCHighlights[desc] then
             removeNPCHighlight(desc)
@@ -542,7 +547,7 @@ local function disableESPNPCs()
     end
 end
 
--- FOV Circle (uses Drawing API if available)
+-- FOV Circle (Drawing API if available)
 local function createFOVDrawing()
     local ok, Drawing = pcall(function() return Drawing end)
     if not ok or not Drawing then return nil end
@@ -560,15 +565,9 @@ local function enableFOV()
     if state.fovEnabled then return end
     local ok, Drawing = pcall(function() return Drawing end)
     if not ok or not Drawing then
-        -- Drawing not available in this environment; silently fail
+        -- Drawing not available in this environment
         return
     end
     state.fovEnabled = true
     if not state.fovDrawing then
-        state.fovDrawing = createFOVDrawing()
-    end
-    if state.fovDrawing then
-        state.fovDrawing.Visible = true
-        state.fovDrawing.Radius = state.fovRadius
-    end
-    state.fovConn = RunService.
+        state.fovDrawing = cr
