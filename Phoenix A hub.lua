@@ -1,5 +1,6 @@
 -- Phoenix A Hub (UI final revisada)
--- LocalScript -> StarterPlayerScripts
+-- LocalScript -> pode ser carregado via loadstring(game:HttpGet("URL"))() no cliente
+-- Recursos: WalkSpeed, JumpPower, Noclip, Teleport, Reset, ESP Players, ESP NPCs, FOV Circle
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -189,7 +190,7 @@ local function createSlider(parent, labelText, defaultValue, minVal, maxVal, ord
     return container, valueBox
 end
 
--- UI raiz
+-- Cria GUI direto no PlayerGui
 local screenGui = Instance.new("ScreenGui")
 screenGui.ResetOnSpawn = false
 screenGui.Name = "PhoenixA_Hub"
@@ -565,9 +566,4 @@ local function enableFOV()
     if state.fovEnabled then return end
     local ok, Drawing = pcall(function() return Drawing end)
     if not ok or not Drawing then
-        -- Drawing not available in this environment
-        return
-    end
-    state.fovEnabled = true
-    if not state.fovDrawing then
-        state.fovDrawing = cr
+    
