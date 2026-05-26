@@ -34,7 +34,7 @@ title.Parent = frame
 local logoToggle = Instance.new("ImageButton")
 logoToggle.Size = UDim2.new(0, 60, 0, 60)
 logoToggle.Position = UDim2.new(0, 10, 0, 10) -- canto superior esquerdo da tela
-logoToggle.Image = "rbxassetid://129084737096368" -- sua logo
+logoToggle.Image = "rbxassetid://91771463650036" -- TextureId correto da logo
 logoToggle.Parent = screenGui
 
 local logoCorner = Instance.new("UICorner")
@@ -49,17 +49,6 @@ logoStroke.Parent = logoToggle
 -- Função para esconder/mostrar o Frame
 local uiVisible = true
 logoToggle.MouseButton1Click:Connect(function()
-    uiVisible = not uiVisible
-    frame.Visible = uiVisible
-end)
-local uiStroke = Instance.new("UIStroke")
-uiStroke.Thickness = 2
-uiStroke.Color = Color3.fromRGB(255, 215, 0)
-uiStroke.Parent = uiToggle
-
--- Função para esconder/mostrar o Frame
-local uiVisible = true
-uiToggle.MouseButton1Click:Connect(function()
     uiVisible = not uiVisible
     frame.Visible = uiVisible
 end)
