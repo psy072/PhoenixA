@@ -1,15 +1,13 @@
--- Phoenix A hub (versão final unificada)
+-- Phoenix A hub (versão corrigida)
 -- Coloque este LocalScript em StarterPlayerScripts
--- Recursos: Abas horizontais, fonte púrpura, sliders funcionais (mouse + toque),
--- Movimento: Fly (toggle + slider), WalkSpeed (slider), JumpPower (slider), Teleport, Reset
--- Extras: Noclip toggle (funcional)
+-- Correções: Fly responsivo em PC e mobile, JumpPower aplicado corretamente, Noclip salva/restaura colisões
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 
--- Character refs (atualiza no respawn)
+-- Helper para obter referências do personagem (atualiza no respawn)
 local function getCharacter()
     local char = player.Character or player.CharacterAdded:Wait()
     local humanoid = char:FindFirstChildOfClass("Humanoid")
@@ -22,6 +20,14 @@ player.CharacterAdded:Connect(function(char)
     character = char
     humanoid = char:WaitForChild("Humanoid")
     hrp = char:WaitForChild("HumanoidRootPart")
+    -- reaplicar valores atuais após respawn
+    if state then
+        if humanoid then
+            humanoid.WalkSpeed = state.walkSpeed or 16
+            humanoid.JumpPower = state.jumpPower or 50
+            humanoid.UseJumpPower = true
+        end
+    end
 end)
 
 -- UI root
@@ -48,11 +54,11 @@ title.Size = UDim2.new(1, -160, 0, 48)
 title.Position = UDim2.new(0, 12, 0, 8)
 title.BackgroundTransparency = 1
 title.Text = "Phoenix A"
-title.TextColor3 = Color3.fromRGB(180, 0, 180) -- fonte púrpura
+title.TextColor3 = Color3.fromRGB(180, 0, 180)
 title.TextScaled = true
 title.Font = Enum.Font.SourceSansBold
 
--- Toggle icon (abre/fecha UI)
+-- Toggle icon
 local toggleBtn = Instance.new("ImageButton", screenGui)
 toggleBtn.Name = "ToggleLogo"
 toggleBtn.Size = UDim2.new(0, 56, 0, 56)
@@ -69,7 +75,7 @@ toggleBtn.MouseButton1Click:Connect(function()
     frame.Visible = uiVisible
 end)
 
--- Drag function
+-- Drag
 local function makeDraggable(gui)
     local dragging, dragStart, startPos
     gui.InputBegan:Connect(function(input)
@@ -94,7 +100,7 @@ end
 makeDraggable(frame)
 makeDraggable(toggleBtn)
 
--- Tabs container (top-right horizontal)
+-- Tabs container
 local tabsContainer = Instance.new("Frame", frame)
 tabsContainer.Name = "TabsContainer"
 tabsContainer.Size = UDim2.new(0, 300, 0, 56)
@@ -113,7 +119,7 @@ local function createTab(name)
     btn.TextScaled = true
     btn.Font = Enum.Font.SourceSansSemibold
     btn.BackgroundColor3 = Color3.fromRGB(28, 48, 88)
-    btn.TextColor3 = Color3.fromRGB(180, 0, 180) -- fonte púrpura
+    btn.TextColor3 = Color3.fromRGB(180, 0, 180)
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
     local stroke = Instance.new("UIStroke", btn)
     stroke.Thickness = 1
@@ -127,7 +133,7 @@ local movimentoTab = createTab("Movimento")
 local visualTab = createTab("Visual")
 local extrasTab = createTab("Extras")
 
--- Content frames (scrolling)
+-- Content frames
 local function createContentFrame()
     local sf = Instance.new("ScrollingFrame", frame)
     sf.Size = UDim2.new(1, -24, 1, -80)
@@ -193,7 +199,7 @@ local function createButton(parent, text, order, callback)
     return btn
 end
 
--- Numeric slider (funcional para mouse e toque) - retorna container e valueBox (opcional)
+-- Numeric slider (mouse + touch) - retorna container e valueBox
 local function createSlider(parent, labelText, defaultValue, minVal, maxVal, order, onChange)
     local container = Instance.new("Frame", parent)
     container.Size = UDim2.new(0.95,0,0,64)
@@ -229,8 +235,8 @@ local function createSlider(parent, labelText, defaultValue, minVal, maxVal, ord
     bar.BackgroundColor3 = Color3.fromRGB(40,70,120)
     Instance.new("UICorner", bar).CornerRadius = UDim.new(0,6)
 
-    local fill = Instance.new("Frame", bar)
     local tInit = (defaultValue - minVal) / math.max(1, (maxVal - minVal))
+    local fill = Instance.new("Frame", bar)
     fill.Size = UDim2.new(tInit, 0, 1, 0)
     fill.BackgroundColor3 = Color3.fromRGB(160,80,220)
     Instance.new("UICorner", fill).CornerRadius = UDim.new(0,6)
@@ -242,7 +248,6 @@ local function createSlider(parent, labelText, defaultValue, minVal, maxVal, ord
     knob.Image = "rbxassetid://3926305904"
     knob.BackgroundTransparency = 1
 
-    -- Drag handling local ao slider
     local dragging = false
     local inputConn = nil
 
@@ -260,7 +265,6 @@ local function createSlider(parent, labelText, defaultValue, minVal, maxVal, ord
     knob.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
-            -- connect InputChanged local
             inputConn = UserInputService.InputChanged:Connect(function(i)
                 if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
                     setValueFromX(i.Position.X)
@@ -287,7 +291,6 @@ local function createSlider(parent, labelText, defaultValue, minVal, maxVal, ord
         end
     end)
 
-    -- When user types a value manually
     valueBox.FocusLost:Connect(function()
         local v = tonumber(valueBox.Text)
         if v then
@@ -302,14 +305,12 @@ local function createSlider(parent, labelText, defaultValue, minVal, maxVal, ord
         end
     end)
 
-    -- initial callback
     if onChange then pcall(onChange, defaultValue) end
-
     return container, valueBox
 end
 
 -- Movement state
-local state = {
+state = {
     fly = false,
     flySpeed = 60,
     walkSpeed = 16,
@@ -318,7 +319,8 @@ local state = {
     flyBV = nil,
     flyBG = nil,
     flyConn = nil,
-    noclipConn = nil
+    noclipConn = nil,
+    savedCollisions = {} -- para restaurar colisões originais
 }
 
 -- Update canvas size helper
@@ -332,7 +334,7 @@ movimentoLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function
 extrasLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() updateCanvasSize(extrasFrame) end)
 visualLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() updateCanvasSize(visualFrame) end)
 
--- Key tracking for fly
+-- Key tracking for fly (PC)
 local keys = {}
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
@@ -346,7 +348,7 @@ UserInputService.InputEnded:Connect(function(input)
     end
 end)
 
--- Fly implementation (simple, responsivo)
+-- Fly implementation (PC + mobile)
 local function startFly()
     if state.fly then return end
     character, humanoid, hrp = getCharacter()
@@ -354,6 +356,7 @@ local function startFly()
     state.fly = true
     humanoid.PlatformStand = true
 
+    -- create BodyVelocity and BodyGyro
     local bv = Instance.new("BodyVelocity")
     bv.MaxForce = Vector3.new(1e5, 1e5, 1e5)
     bv.Velocity = Vector3.new(0,0,0)
@@ -372,17 +375,38 @@ local function startFly()
         local cam = workspace.CurrentCamera
         local forward = cam.CFrame.LookVector
         local right = cam.CFrame.RightVector
+
+        -- movement vector: prefer keyboard keys (PC), fallback to humanoid.MoveDirection (mobile / controller)
         local moveVec = Vector3.new(0,0,0)
-        if keys[Enum.KeyCode.W] then moveVec = moveVec + forward end
-        if keys[Enum.KeyCode.S] then moveVec = moveVec - forward end
-        if keys[Enum.KeyCode.D] then moveVec = moveVec + right end
-        if keys[Enum.KeyCode.A] then moveVec = moveVec - right end
+        if keys[Enum.KeyCode.W] or keys[Enum.KeyCode.S] or keys[Enum.KeyCode.A] or keys[Enum.KeyCode.D] then
+            if keys[Enum.KeyCode.W] then moveVec = moveVec + forward end
+            if keys[Enum.KeyCode.S] then moveVec = moveVec - forward end
+            if keys[Enum.KeyCode.D] then moveVec = moveVec + right end
+            if keys[Enum.KeyCode.A] then moveVec = moveVec - right end
+        else
+            -- fallback: use MoveDirection (works with mobile joystick and controller)
+            local md = humanoid.MoveDirection
+            if md and md.Magnitude > 0 then
+                -- align with camera
+                local camLook = Vector3.new(cam.CFrame.LookVector.X, 0, cam.CFrame.LookVector.Z).Unit
+                local camRight = Vector3.new(cam.CFrame.RightVector.X, 0, cam.CFrame.RightVector.Z).Unit
+                moveVec = (camLook * md.Z) + (camRight * md.X)
+            end
+        end
+
         local vertical = 0
+        -- Jump detection: prefer keyboard space; also check humanoid.Jump if mobile uses jump button
         if keys[Enum.KeyCode.Space] then vertical = vertical + 1 end
         if keys[Enum.KeyCode.LeftShift] or keys[Enum.KeyCode.RightShift] then vertical = vertical - 1 end
+        -- If player pressed the jump action via Humanoid (mobile), use Humanoid:GetState or Jump property
+        if humanoid and humanoid:GetState() == Enum.HumanoidStateType.Jumping then
+            vertical = vertical + 1
+        end
+
         local dir = Vector3.new(moveVec.X, 0, moveVec.Z)
         if dir.Magnitude > 0 then dir = dir.Unit end
         local targetVel = (dir * state.flySpeed) + Vector3.new(0, vertical * state.flySpeed, 0)
+
         if state.flyBV and state.flyBV.Parent then
             state.flyBV.Velocity = targetVel
         end
@@ -402,15 +426,25 @@ local function stopFly()
     state.flyBG = nil
 end
 
--- Noclip implementation (Extras)
+-- Noclip implementation (salva e restaura colisões)
 local function startNoclip()
     if state.noclip then return end
     character, humanoid, hrp = getCharacter()
+    if not character then return end
     state.noclip = true
+    -- salvar estados originais
+    state.savedCollisions = {}
+    for _, part in pairs(character:GetDescendants()) do
+        if part:IsA("BasePart") then
+            state.savedCollisions[part] = part.CanCollide
+            part.CanCollide = false
+        end
+    end
+    -- manter sem colisão caso novas partes apareçam
     state.noclipConn = RunService.Stepped:Connect(function()
         if not character then return end
         for _, part in pairs(character:GetDescendants()) do
-            if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+            if part:IsA("BasePart") then
                 part.CanCollide = false
             end
         end
@@ -420,18 +454,21 @@ end
 local function stopNoclip()
     state.noclip = false
     if state.noclipConn then state.noclipConn:Disconnect() state.noclipConn = nil end
-    if character then
-        for _, part in pairs(character:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = true
+    -- restaurar estados salvos
+    if character and state.savedCollisions then
+        for part, canCollide in pairs(state.savedCollisions) do
+            if part and part:IsA("BasePart") then
+                part.CanCollide = canCollide
             end
         end
     end
+    state.savedCollisions = {}
 end
 
 -- Teleport helper
 local function teleportToPlayer(name)
     if not name or name == "" then return end
+    character, humanoid, hrp = getCharacter()
     for _, pl in pairs(Players:GetPlayers()) do
         if pl.Name:lower():find(name:lower()) then
             if pl.Character and pl.Character:FindFirstChild("HumanoidRootPart") and hrp then
@@ -448,8 +485,11 @@ local function resetMovement()
     if humanoid then
         humanoid.WalkSpeed = 16
         humanoid.JumpPower = 50
+        humanoid.UseJumpPower = true
     end
     state.flySpeed = 60
+    state.walkSpeed = 16
+    state.jumpPower = 50
     stopFly()
     stopNoclip()
 end
@@ -468,13 +508,18 @@ order = order + 1
 
 createSlider(movimentoFrame, "Walk Speed", 16, 8, 200, order, function(val)
     state.walkSpeed = val
+    character, humanoid = getCharacter()
     if humanoid then humanoid.WalkSpeed = val end
 end)
 order = order + 1
 
 createSlider(movimentoFrame, "Jump Power", 50, 10, 300, order, function(val)
     state.jumpPower = val
-    if humanoid then humanoid.JumpPower = val end
+    character, humanoid = getCharacter()
+    if humanoid then
+        humanoid.JumpPower = val
+        humanoid.UseJumpPower = true
+    end
 end)
 order = order + 1
 
@@ -491,61 +536,4 @@ tpLabel.TextColor3 = Color3.fromRGB(230,230,230)
 tpLabel.TextScaled = true
 local tpBox = Instance.new("TextBox", tpContainer)
 tpBox.Size = UDim2.new(0.58, 0, 1, 0)
-tpBox.Position = UDim2.new(0.38, 0, 0, 0)
-tpBox.PlaceholderText = "player name"
-tpBox.Text = ""
-tpBox.TextScaled = true
-tpBox.BackgroundColor3 = Color3.fromRGB(24,44,84)
-Instance.new("UICorner", tpBox).CornerRadius = UDim.new(0,6)
-local tpStroke = Instance.new("UIStroke", tpBox)
-tpStroke.Thickness = 1
-tpStroke.Color = Color3.fromRGB(140,40,180)
-order = order + 1
-
-createButton(movimentoFrame, "Teleport", order, function()
-    teleportToPlayer(tpBox.Text)
-end)
-order = order + 1
-
-createButton(movimentoFrame, "Reset Movement", order, function()
-    resetMovement()
-end)
-order = order + 1
-
--- Extras: Noclip toggle
-createButton(extrasFrame, "Toggle Noclip", 1, function()
-    if state.noclip then stopNoclip() else startNoclip() end
-end)
-
--- Visual placeholder
-local placeholder = Instance.new("TextLabel", visualFrame)
-placeholder.Size = UDim2.new(0.9, 0, 0, 44)
-placeholder.LayoutOrder = 1
-placeholder.BackgroundTransparency = 1
-placeholder.Text = "Visuals (ESP, Radar) - em desenvolvimento"
-placeholder.TextColor3 = Color3.fromRGB(220,220,220)
-placeholder.TextScaled = true
-placeholder.Font = Enum.Font.SourceSans
-
--- Apply initial values
-if humanoid then
-    humanoid.WalkSpeed = state.walkSpeed
-    humanoid.JumpPower = state.jumpPower
-end
-
--- Update canvas sizes initially
-task.delay(0.1, function()
-    updateCanvasSize(movimentoFrame)
-    updateCanvasSize(extrasFrame)
-    updateCanvasSize(visualFrame)
-end)
-
--- Cleanup on script removal
-script.AncestryChanged:Connect(function()
-    if not script:IsDescendantOf(game) then
-        stopFly()
-        stopNoclip()
-    end
-end)
-
--- Safety note: teste em Play Solo antes de usar em servidores públicos
+tpBox.Posi
