@@ -1,54 +1,139 @@
--- Criando a ScreenGui
-local screenGui = Instance.new("ScreenGui")
-screenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+-- Phoenix A hub unificado com funções extras
 
--- Criando o Frame principal (UI Phoenix A)
-local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 250, 0, 150)
-frame.Position = UDim2.new(0.5, -125, 0.5, -75)
-frame.BackgroundColor3 = Color3.fromRGB(10, 20, 40) -- azul marinho
-frame.Parent = screenGui
+local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
 
--- UICorner e UIStroke no Frame
-local corner = Instance.new("UICorner")
-corner.CornerRadius = UDim.new(0, 12)
-corner.Parent = frame
+-- Função: criar UI
+local function criarUI()
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
-local stroke = Instance.new("UIStroke")
-stroke.Thickness = 2
-stroke.Color = Color3.fromRGB(128, 0, 128) -- púrpura
-stroke.Parent = frame
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 250, 0, 150)
+    frame.Position = UDim2.new(0.5, -125, 0.5, -75)
+    frame.BackgroundColor3 = Color3.fromRGB(10, 20, 40)
+    frame.Parent = screenGui
 
--- Título púrpura
-local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, 0, 0, 40)
-title.Position = UDim2.new(0, 0, 0, 0)
-title.BackgroundTransparency = 1
-title.Text = "Phoenix A"
-title.TextColor3 = Color3.fromRGB(128, 0, 128) -- púrpura
-title.TextScaled = true
-title.Font = Enum.Font.SourceSansBold
-title.Parent = frame
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 12)
+    corner.Parent = frame
 
--- Botão de toggle isolado (logo Phoenix A)
-local logoToggle = Instance.new("ImageButton")
-logoToggle.Size = UDim2.new(0, 60, 0, 60)
-logoToggle.Position = UDim2.new(0, 10, 0, 10) -- canto superior esquerdo da tela
-logoToggle.Image = "rbxassetid://126836694733781" -- TextureId da nova logo Phoenix A
-logoToggle.Parent = screenGui
+    local stroke = Instance.new("UIStroke")
+    stroke.Thickness = 2
+    stroke.Color = Color3.fromRGB(128, 0, 128)
+    stroke.Parent = frame
 
-local logoCorner = Instance.new("UICorner")
-logoCorner.CornerRadius = UDim.new(0, 8)
-logoCorner.Parent = logoToggle
+    local title = Instance.new("TextLabel")
+    title.Size = UDim2.new(1, 0, 0, 40)
+    title.BackgroundTransparency = 1
+    title.Text = "Phoenix A"
+    title.TextColor3 = Color3.fromRGB(128, 0, 128)
+    title.TextScaled = true
+    title.Font = Enum.Font.SourceSansBold
+    title.Parent = frame
 
-local logoStroke = Instance.new("UIStroke")
-logoStroke.Thickness = 2
-logoStroke.Color = Color3.fromRGB(128, 0, 128) -- púrpura
-logoStroke.Parent = logoToggle
+    local logoToggle = Instance.new("ImageButton")
+    logoToggle.Size = UDim2.new(0, 60, 0, 60)
+    logoToggle.Position = UDim2.new(0, 10, 0, 10)
+    logoToggle.Image = "rbxassetid://126836694733781"
+    logoToggle.Parent = screenGui
 
--- Função para esconder/mostrar o Frame
-local uiVisible = true
-logoToggle.MouseButton1Click:Connect(function()
-    uiVisible = not uiVisible
-    frame.Visible = uiVisible
-end)
+    local logoCorner = Instance.new("UICorner")
+    logoCorner.CornerRadius = UDim.new(0, 8)
+    logoCorner.Parent = logoToggle
+
+    local logoStroke = Instance.new("UIStroke")
+    logoStroke.Thickness = 2
+    logoStroke.Color = Color3.fromRGB(128, 0, 128)
+    logoStroke.Parent = logoToggle
+
+    return frame, logoToggle
+end
+
+-- Função: toggle abrir/fechar
+local function ativarToggle(frame, logoToggle)
+    local uiVisible = true
+    logoToggle.MouseButton1Click:Connect(function()
+        uiVisible = not uiVisible
+        frame.Visible = uiVisible
+    end)
+end
+
+-- Função: arrastar objetos
+local function makeDraggable(guiObject)
+    local dragging, dragInput, dragStart, startPos
+
+    guiObject.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = input.Position
+            startPos = guiObject.Position
+
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    guiObject.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            dragInput = input
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            guiObject.Position = UDim2.new(
+                startPos.X.Scale,
+                startPos.X.Offset + delta.X,
+                startPos.Y.Scale,
+                startPos.Y.Offset + delta.Y
+            )
+        end
+    end)
+end
+
+-- Função: Fly (exemplo básico)
+local function ativarFly()
+    local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local humanoidRootPart = character:WaitForChild("HumanoidRootPart")
+
+    local flying = true
+    local speed = 5
+
+    -- Loop simples de movimento
+    while flying do
+        task.wait()
+        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+            humanoidRootPart.Velocity = Vector3.new(0, speed, 0)
+        elseif UserInputService:IsKeyDown(Enum.KeyCode.LeftShift) then
+            humanoidRootPart.Velocity = Vector3.new(0, -speed, 0)
+        end
+    end
+end
+
+-- Função: ESP (exemplo básico)
+local function ativarESP()
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character then
+            local highlight = Instance.new("Highlight")
+            highlight.Parent = player.Character
+            highlight.FillColor = Color3.fromRGB(255, 0, 0) -- vermelho
+            highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+        end
+    end
+end
+
+-- Inicialização
+local frame, logoToggle = criarUI()
+ativarToggle(frame, logoToggle)
+makeDraggable(frame)
+makeDraggable(logoToggle)
+
+-- Espaço reservado: chamar funções de jogo
+-- Exemplo: ativarFly()
+-- Exemplo: ativarESP()
