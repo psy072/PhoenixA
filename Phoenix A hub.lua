@@ -1,7 +1,6 @@
--- Phoenix A hub com drag para PC e celular
+-- Phoenix A hub básico (UI + toggle + drag universal)
 
 local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
 local player = game.Players.LocalPlayer
 local screenGui = Instance.new("ScreenGui")
 screenGui.Parent = player:WaitForChild("PlayerGui")
@@ -54,7 +53,7 @@ logoToggle.MouseButton1Click:Connect(function()
     frame.Visible = uiVisible
 end)
 
--- Função drag com suporte PC + celular
+-- Função drag universal (PC + celular)
 local function makeDraggable(guiObject)
     local dragging = false
     local dragStart, startPos
@@ -84,12 +83,8 @@ local function makeDraggable(guiObject)
     end)
 
     guiObject.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-            RunService.RenderStepped:Connect(function()
-                if dragging then
-                    update(input)
-                end
-            end)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            update(input)
         end
     end)
 end
